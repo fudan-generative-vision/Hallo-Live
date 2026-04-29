@@ -68,7 +68,7 @@ Click the prompt preview to expand the full text.
       </details>
     </td>
     <td width="50%">
-      <video src=https://github.com/user-attachments/assets/1fa14405-88d1-45d5-b896-0e8ed08be718 controls preload="metadata" width="100%"></video>
+      <video src=https://github.com/user-attachments/assets/f3efd06c-6cb3-42d4-9a9a-b78244d12993 controls preload="metadata" width="100%"></video>
     </td>
   </tr>
   <tr>
@@ -79,7 +79,11 @@ Click the prompt preview to expand the full text.
       </details>
     </td>
     <td width="50%">
-      <video src=https://github.com/user-attachments/assets/3b9dab11-c85c-46e7-8fd0-1b35248589eb controls preload="metadata" width="100%"></video>
+      <video src=https://github.com/user-attachments/assets/987043fa-9390-48af-a2b3-7d6480e0be0b
+
+https://github.com/user-attachments/assets/cfae1c18-5142-4a9f-acc5-2124a91f5f07
+
+ controls preload="metadata" width="100%"></video>
     </td>
   </tr>
   <tr>
@@ -90,7 +94,7 @@ Click the prompt preview to expand the full text.
       </details>
     </td>
     <td width="50%">
-      <video src=https://github.com/user-attachments/assets/7b24b5f8-b19e-46bc-8826-4fb2431091cc controls preload="metadata" width="100%"></video>
+      <video src=https://github.com/user-attachments/assets/a26173d4-c3fc-48ee-baae-00c231302539 controls preload="metadata" width="100%"></video>
     </td>
   </tr>
   <tr>
@@ -101,7 +105,7 @@ Click the prompt preview to expand the full text.
       </details>
     </td>
     <td width="50%">
-      <video src=https://github.com/user-attachments/assets/fecca78b-631b-423c-9da2-aac396b99082 controls preload="metadata" width="100%"></video>
+      <video src=https://github.com/user-attachments/assets/9e7996d4-d600-4687-8b76-7e700635fae5 controls preload="metadata" width="100%"></video>
     </td>
   </tr>
   <tr>
@@ -112,7 +116,7 @@ Click the prompt preview to expand the full text.
       </details>
     </td>
     <td width="50%">
-      <video src=https://github.com/user-attachments/assets/72bee1d2-cd2f-4758-a399-491eb961d398 controls preload="metadata" width="100%"></video>
+      <video src=https://github.com/user-attachments/assets/48d4782a-8805-4ea3-8005-4859ddaf4d37 controls preload="metadata" width="100%"></video>
     </td>
   </tr>
 </table>
