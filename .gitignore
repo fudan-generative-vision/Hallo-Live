@@ -1,0 +1,38 @@
+# PyCharm files
+.idea/
+
+# macOS dir files
+.DS_Store
+
+# VS Code configuration dir
+.vscode/
+
+# Jupyter Notebook cache files
+.ipynb_checkpoints/
+*.ipynb
+
+# checkpoint files
+*.safetensors
+*.ckpt
+*.pt
+*.pth
+
+# Python cache files
+__pycache__/
+
+*.egg-info
+core.*
+
+/wan_models/
+/checkpoints
+/output/
+/wandb/
+/papers/
+/ode_data
+.sii/
+.claude/
+/temp/
+/internal
+/reward_temp
+/detect_results
+/*.mp4

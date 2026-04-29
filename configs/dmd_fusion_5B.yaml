@@ -1,0 +1,90 @@
+generator_ckpt: checkpoints/ode_init_fusion_5b_strict_17000_block_30/checkpoint_model_003000/model.pt
+# generator_ckpt: checkpoints/dmd_5B_data_17000_audio_init/checkpoint_model_005000/model.pt
+real_score_ckpt: /inspire/hdd/project/chineseculture/public/chunyu/model/Ovi/model.safetensors
+fake_score_ckpt: /inspire/hdd/project/chineseculture/public/chunyu/model/Ovi/model.safetensors
+model_dir: /inspire/hdd/project/chineseculture/public/chunyu/model
+generator_video_config: hallolive/ovi/configs/model/dit/video_causal_5B.json
+generator_audio_config: hallolive/ovi/configs/model/dit/audio_causal_5B.json
+real_score_video_config: hallolive/ovi/configs/model/dit/video_5B.json
+real_score_audio_config: hallolive/ovi/configs/model/dit/audio_5B.json
+fake_score_video_config: hallolive/ovi/configs/model/dit/video_5B.json
+fake_score_audio_config: hallolive/ovi/configs/model/dit/audio_5B.json
+generator_fsdp_wrap_strategy: hybrid
+real_score_fsdp_wrap_strategy: hybrid
+fake_score_fsdp_wrap_strategy: hybrid
+text_encoder_cpu_offload: true
+text_encoder_fsdp_wrap_strategy: size
+denoising_step_list:
+  - 1000
+  - 750
+  - 500
+  - 250
+warp_denoising_step: true # need to remove - 0 in denoising_step_list if warp_denoising_step is true
+ts_schedule: false
+num_train_timestep: 1000
+timestep_shift: 5.0
+video_guidance_scale: 4.0
+audio_guidance_scale: 5.0
+denoising_loss_type: flow
+mixed_precision: true
+seed: 103
+wandb_host: https://api.wandb.ai
+wandb_key: WANDB_KEY
+wandb_entity: WANDB_USERNAME
+wandb_project: Hallo-Live
+wandb_mode: offline
+wandb_save_dir: .
+sharding_strategy: full # [hybrid_full, full, full_zero2]
+lr: 2.0e-06
+lr_video: 2.0e-06
+lr_audio: 6.0e-06
+lr_critic: 4.0e-07
+lr_critic_video: 4.0e-07
+lr_critic_audio: 1.2e-06
+beta1: 0.0
+beta2: 0.999
+beta1_critic: 0.0
+beta2_critic: 0.999
+batch_size: 1
+# ema_weight: 0
+ema_weight: 0.99
+ema_start_step: 200
+save_ckpt_dir: checkpoints
+save_ckpt_steps: 500
+video_negative_prompt: "jitter, bad hands, blur, distortion" # Artifacts to avoid in video
+audio_negative_prompt: "robotic, muffled, echo, distorted" # Artifacts to avoid in audio
+dfake_gen_update_ratio: 5
+image_or_video_shape:
+  - 1
+  - 30
+  - 48
+  - 32
+  - 62
+audio_shape:
+  - 1
+  - 150
+  - 20
+distribution_loss: dmd_fusion
+trainer: dmd_fusion
+data_path: /inspire/hdd/project/chineseculture/public/chunyu/data/hallolive_prompts/synthetic_prompts_30k.csv
+gradient_accumulation_steps: 1
+enable_rl_reward: false
+reward_beta: 1.0
+reward_temp_dir: reward_temp
+reward_types: [sync] # [videoalign, audiobox, sync]
+reward_model_cpu_offload: true
+gradient_checkpointing: true
+video_num_frame_per_block: 6
+audio_num_frame_per_block: 30
+future_audio_frames: 0
+enable_cross_attention: true
+partial_finetune: true
+train_audio_stream_only: false
+trainable_modules:
+  - self_attn.
+  - cross_attn.
+load_raw_video: false
+max_steps: 6000
+video_loss_weight: 0.85
+audio_loss_weight: 0.15
+use_decoupled_dmd: false

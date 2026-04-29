@@ -1,0 +1,43 @@
+generator_ckpt: /inspire/hdd/project/chineseculture/public/chunyu/model/Ovi/model.safetensors
+model_dir: /inspire/hdd/project/chineseculture/public/chunyu/model
+generator_video_config: hallolive/ovi/configs/model/dit/video_causal_5B.json
+generator_audio_config: hallolive/ovi/configs/model/dit/audio_causal_5B.json
+generator_fsdp_wrap_strategy: hybrid
+text_encoder_fsdp_wrap_strategy: size
+denoising_step_list:
+  - 1000
+  - 750
+  - 500
+  - 250
+warp_denoising_step: true # need to remove - 0 in denoising_step_list if warp_denoising_step is true
+num_train_timestep: 1000
+timestep_shift: 5.0
+guidance_scale: 3.0
+mixed_precision: true
+seed: 0
+wandb_host: https://api.wandb.ai
+wandb_key: WANDB_KEY
+wandb_entity: WANDB_USERNAME
+wandb_project: Hallo-Live
+wandb_mode: offline
+wandb_save_dir: .
+sharding_strategy: hybrid_full
+lr: 2.0e-06 # 2.0e-06, 1.0e-05
+beta1: 0.9
+beta2: 0.999
+data_path: ode_data/ode_fusion_17000/lmdb
+save_ckpt_dir: checkpoints
+save_ckpt_steps: 500
+batch_size: 4
+total_batch_size: 8
+distribution_loss: ode_fusion
+trainer: ode_fusion
+gradient_checkpointing: true
+video_num_frame_per_block: 6
+audio_num_frame_per_block: 30
+future_audio_frames: 0
+enable_cross_attention: true
+load_raw_video: false
+max_steps: 8000
+video_loss_weight: 0.85
+audio_loss_weight: 0.15

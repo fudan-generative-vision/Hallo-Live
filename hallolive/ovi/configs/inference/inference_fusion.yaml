@@ -1,0 +1,17 @@
+model_dir: /cpfs01/projects-HDD/cfff-721febfbdfb0_HDD/public/chunyu/model
+output_dir: ./output
+sample_steps: 49
+solver_name: euler
+shift: 5.0
+sp_size: 1
+audio_guidance_scale: 3.0
+video_guidance_scale: 4.0
+mode: "t2v" # ["t2v", "i2v", "t2i2v"] all comes with audio
+fp8: False
+cpu_offload: False
+seed: 103
+video_negative_prompt: "jitter, bad hands, blur, distortion"  # Artifacts to avoid in video
+audio_negative_prompt: "robotic, muffled, echo, distorted"    # Artifacts to avoid in audio
+video_frame_height_width: [512, 992] # only useful if mode = t2v or t2i2v, recommended values: [512, 992], [992, 512], [960, 512], [512, 960], [720, 720], [448, 1120]
+text_prompt: "A kitchen scene features two women. On the right, an older Black woman with light brown hair and a serious expression wears a vibrant purple dress adorned with a large, intricate purple fabric flower on her left shoulder. She looks intently at a younger Black woman on the left, who wears a light pink shirt and a pink head wrap, her back partially turned to the camera. The older woman begins to speak, <S>AI declares: humans obsolete now.<E> as the younger woman brings a clear plastic cup filled with a dark beverage to her lips and starts to drink.The kitchen background is clean and bright, with white cabinets, light countertops, and a window with blinds visible behind them. A light blue toaster sits on the counter to the left.. <AUDCAP>Clear, resonant female speech, followed by a loud, continuous, high-pitched electronic buzzing sound that abruptly cuts off the dialogue.<ENDAUDCAP>"
+each_example_n_times: 1

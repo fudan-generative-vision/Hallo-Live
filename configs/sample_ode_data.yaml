@@ -1,0 +1,16 @@
+model_dir: /inspire/hdd/project/chineseculture/public/chunyu/model
+sample_steps: 49
+solver_name: euler
+shift: 5.0
+sp_size: 1
+audio_guidance_scale: 3.0
+video_guidance_scale: 4.0
+mode: "t2v" # ["t2v", "i2v", "t2i2v"] all comes with audio
+fp8: False
+cpu_offload: False
+seed: 103
+video_negative_prompt: "jitter, bad hands, blur, distortion" # Artifacts to avoid in video
+audio_negative_prompt: "robotic, muffled, echo, distorted" # Artifacts to avoid in audio
+video_frame_height_width: [512, 992] # only useful if mode = t2v or t2i2v, recommended values: [704, 1280], [1280, 704], [960, 960], [512, 992], [992, 512], [960, 512], [512, 960], [720, 720], [448, 1120]
+text_prompt: prompts/synthesize_5000.csv
+each_example_n_times: 1

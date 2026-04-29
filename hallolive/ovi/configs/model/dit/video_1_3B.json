@@ -1,0 +1,24 @@
+{
+    "patch_size": [
+        1,
+        2,
+        2
+    ],
+    "model_type": "ti2v",
+    "dim": 1536,
+    "ffn_dim": 8960,
+    "freq_dim": 256,
+    "num_heads": 12,
+    "num_layers": 30,
+    "in_dim": 48,
+    "out_dim": 48,
+    "text_len": 512,
+    "window_size": [
+        -1,
+        -1
+    ],
+    "qk_norm": true,
+    "cross_attn_norm": true,
+    "eps": 1e-6,
+    "video_latent_length": 30
+}
