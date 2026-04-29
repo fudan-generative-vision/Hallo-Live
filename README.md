@@ -79,11 +79,7 @@ Click the prompt preview to expand the full text.
       </details>
     </td>
     <td width="50%">
-      <video src=https://github.com/user-attachments/assets/987043fa-9390-48af-a2b3-7d6480e0be0b
-
-https://github.com/user-attachments/assets/cfae1c18-5142-4a9f-acc5-2124a91f5f07
-
- controls preload="metadata" width="100%"></video>
+      <video src=https://github.com/user-attachments/assets/987043fa-9390-48af-a2b3-7d6480e0be0b controls preload="metadata" width="100%"></video>
     </td>
   </tr>
   <tr>
