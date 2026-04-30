@@ -1,5 +1,5 @@
-<h1 align="center">Hallo-Live</h1>
-<!-- <h1 align="center">Hallo-Live: Real-Time Streaming Joint Audio-Video Avatar</h1> -->
+<!-- <h1 align="center">Hallo-Live</h1> -->
+<h1 align="center">Hallo-Live: Real-Time Streaming Joint Audio-Video Avatar Generation</h1>
 
 <div align='center'>
 <a href="https://github.com/chunyu-li" target="_blank">Chunyu Li</a><sup>1,2,*</sup> &emsp;
