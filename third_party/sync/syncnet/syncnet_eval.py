@@ -15,8 +15,17 @@ import os
 def check_model_and_download(ckpt_path: str, huggingface_model_id: str = "ByteDance/LatentSync-1.5"):
     if not os.path.exists(ckpt_path):
         ckpt_path_obj = Path(ckpt_path)
-        download_cmd = f"huggingface-cli download {huggingface_model_id} {Path(*ckpt_path_obj.parts[1:])} --local-dir {Path(ckpt_path_obj.parts[0])}"
-        subprocess.run(download_cmd, shell=True)
+        subprocess.run(
+            [
+                "hf",
+                "download",
+                huggingface_model_id,
+                str(Path(*ckpt_path_obj.parts[1:])),
+                "--local-dir",
+                str(Path(ckpt_path_obj.parts[0])),
+            ],
+            check=True,
+        )
 
 # ==================== Get OFFSET ====================
 
