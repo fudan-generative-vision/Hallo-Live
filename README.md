@@ -235,15 +235,15 @@ This project builds on and benefits from the following open-source projects and 
 - [MMAudio](https://github.com/hkchengrex/MMAudio) for audio VAE components.
 - [VideoAlign](https://github.com/KwaiVGI/VideoAlign), [AudioBox Aesthetics](https://github.com/facebookresearch/audiobox-aesthetics) and [SyncNet](https://github.com/joonson/syncnet_python) for reward modeling.
 
-<!-- ## 📖 Citation
+## 📖 Citation
 
 If you find this repository useful, please cite:
 
 ```bibtex
-@article{li2026hallolive,
+@article{li2026hallo,
   title={Hallo-Live: Real-Time Streaming Joint Audio-Video Avatar Generation with Asynchronous Dual-Stream and Human-Centric Preference Distillation},
   author={Li, Chunyu and Li, Jiaye and Mei, Ruiqiao and Xia, Haoyuan and Zhu, Hao and Wang, Jingdong and Zhu, Siyu},
   journal={arXiv preprint arXiv:2604.23632},
   year={2026}
 }
-``` -->
+```
