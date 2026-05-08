@@ -13,7 +13,7 @@ TASK="${1:-}"
 if [[ "$TASK" == "inference" ]]; then
   # Checkpoints required by inference.py.
   hf download fudan-generative-ai/Hallo-Live hallolive_dit.pt --local-dir "$MODEL_DIR/Hallo-Live"
-  hf download Wan-AI/Wan2.1-T2V-1.3B Wan2.1_VAE.pth models_t5_umt5-xxl-enc-bf16.pth --local-dir "$MODEL_DIR/Wan2.1-T2V-1.3B"
+  hf download Wan-AI/Wan2.1-T2V-1.3B models_t5_umt5-xxl-enc-bf16.pth --local-dir "$MODEL_DIR/Wan2.1-T2V-1.3B"
   hf download Wan-AI/Wan2.1-T2V-1.3B --include "google/umt5-xxl/*" --local-dir "$MODEL_DIR/Wan2.1-T2V-1.3B"
   hf download Wan-AI/Wan2.2-TI2V-5B Wan2.2_VAE.pth --local-dir "$MODEL_DIR/Wan2.2-TI2V-5B"
   hf download hkchengrex/MMAudio ext_weights/v1-16.pth ext_weights/best_netG.pt --local-dir "$MODEL_DIR/MMAudio"

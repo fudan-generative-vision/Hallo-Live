@@ -38,7 +38,7 @@ def init_mmaudio_vae(model_dir, rank=0):
     return vae
 
 
-def init_fusion_score_model_ovi(rank: int = 0, meta_init=False):
+def init_fusion_score_model_ovi(meta_init=False):
     video_config = OVI_ROOT / "configs" / "model" / "dit" / "video_5B.json"
     audio_config = OVI_ROOT / "configs" / "model" / "dit" / "audio_5B.json"
     assert video_config.exists(), f"{video_config} does not exist"
@@ -55,11 +55,6 @@ def init_fusion_score_model_ovi(rank: int = 0, meta_init=False):
             fusion_model = FusionModel(video_config, audio_config)
     else:
         fusion_model = FusionModel(video_config, audio_config)
-
-    params_all = sum(p.numel() for p in fusion_model.parameters())
-
-    if rank == 0:
-        print(f"Score model (Fusion) all parameters:{params_all}")
 
     return fusion_model, video_config, audio_config
 
@@ -102,6 +97,5 @@ def load_fusion_checkpoint(model, checkpoint_path, from_meta=False):
         import gc
 
         gc.collect()
-        print(f"Successfully loaded fusion checkpoint from {checkpoint_path}")
     else:
         raise RuntimeError("{checkpoint=} does not exists'")

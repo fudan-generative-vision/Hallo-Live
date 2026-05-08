@@ -9,13 +9,7 @@ from torch.nn.attention.flex_attention import create_block_mask, BlockMask
 
 
 class CausalFusionModel(nn.Module):
-    def __init__(
-        self,
-        video_config=None,
-        audio_config=None,
-        enable_cross_attention=True,
-        future_audio_frames=None,
-    ):
+    def __init__(self, video_config=None, audio_config=None, enable_cross_attention=True, future_audio_frames=None):
         super().__init__()
         self.future_audio_frames = None if future_audio_frames is None else int(future_audio_frames)
         has_video = True
@@ -55,23 +49,6 @@ class CausalFusionModel(nn.Module):
         self.video_model.set_gradient_checkpointing(True)
         self.audio_model.set_gradient_checkpointing(True)
         self.gradient_checkpointing = True
-
-    # def inject_cross_attention_kv_projections(self):
-    #     for vid_block in self.video_model.blocks:
-    #         vid_block.cross_attn.k_fusion = nn.Linear(vid_block.dim, vid_block.dim)
-    #         vid_block.cross_attn.v_fusion = nn.Linear(vid_block.dim, vid_block.dim)
-    #         vid_block.cross_attn.pre_attn_norm_fusion = WanLayerNorm(vid_block.dim, elementwise_affine=True)
-    #         vid_block.cross_attn.norm_k_fusion = (
-    #             WanRMSNorm(vid_block.dim, eps=1e-6) if vid_block.qk_norm else nn.Identity()
-    #         )
-
-    #     for audio_block in self.audio_model.blocks:
-    #         audio_block.cross_attn.k_fusion = nn.Linear(audio_block.dim, audio_block.dim)
-    #         audio_block.cross_attn.v_fusion = nn.Linear(audio_block.dim, audio_block.dim)
-    #         audio_block.cross_attn.pre_attn_norm_fusion = WanLayerNorm(audio_block.dim, elementwise_affine=True)
-    #         audio_block.cross_attn.norm_k_fusion = (
-    #             WanRMSNorm(audio_block.dim, eps=1e-6) if audio_block.qk_norm else nn.Identity()
-    #         )
 
     def inject_cross_attention_kv_projections(self):
         for index in range(len(self.video_model.blocks)):

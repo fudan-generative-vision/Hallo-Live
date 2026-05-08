@@ -20,11 +20,7 @@ from hallolive.ovi.utils.model_loading_utils import (
 )
 from hallolive.ovi.utils.fm_solvers_unipc import FlowUniPCMultistepScheduler
 from diffusers import FlowMatchEulerDiscreteScheduler
-from hallolive.ovi.utils.fm_solvers import (
-    FlowDPMSolverMultistepScheduler,
-    get_sampling_sigmas,
-    retrieve_timesteps,
-)
+from hallolive.ovi.utils.fm_solvers import FlowDPMSolverMultistepScheduler, get_sampling_sigmas, retrieve_timesteps
 import traceback
 from omegaconf import OmegaConf
 from hallolive.ovi.utils.processing_utils import (
@@ -33,6 +29,7 @@ from hallolive.ovi.utils.processing_utils import (
     snap_hw_to_multiple_of_32,
     scale_hw_to_area_divisible,
 )
+from hallolive.utils.misc import count_params
 
 from optimum.quanto import freeze, qint8, quantize
 
@@ -50,7 +47,7 @@ class OviFusionEngine:
         if self.cpu_offload:
             logging.info("CPU offloading is enabled. Initializing all models aside from VAEs on CPU")
 
-        model, video_config, audio_config = init_fusion_score_model_ovi(rank=device, meta_init=meta_init)
+        model, video_config, audio_config = init_fusion_score_model_ovi(meta_init=meta_init)
 
         fp8 = config.get("fp8", False)
         int8 = config.get("qint8", False)
@@ -83,9 +80,7 @@ class OviFusionEngine:
 
         # Find fusion ckpt in the same dir used by other components
         checkpoint_path = os.path.join(
-            config.model_dir,
-            "Ovi",
-            "model.safetensors" if not fp8 else "model_fp8_e4m3fn.safetensors",
+            config.model_dir, "Ovi", "model.safetensors" if not fp8 else "model_fp8_e4m3fn.safetensors"
         )
 
         if not os.path.exists(checkpoint_path):
@@ -99,6 +94,11 @@ class OviFusionEngine:
             model = model.to(device=device if not self.cpu_offload else "cpu").eval()
             model.set_rope_params()
         self.model = model
+
+        if torch.distributed.is_initialized() and torch.distributed.get_rank() == 0:
+            print(f"Fusion model parameters: {count_params(self.model) / 1e9:.1f}B")
+            print(f"Text encoder parameters: {count_params(self.text_model.model) / 1e9:.1f}B")
+
         if int8:
             quantize(self.model, qint8)
             freeze(self.model)
@@ -162,16 +162,10 @@ class OviFusionEngine:
         )
         try:
             scheduler_video, timesteps_video = self.get_scheduler_time_steps(
-                sampling_steps=sample_steps,
-                device=self.device,
-                solver_name=solver_name,
-                shift=shift,
+                sampling_steps=sample_steps, device=self.device, solver_name=solver_name, shift=shift
             )
             scheduler_audio, timesteps_audio = self.get_scheduler_time_steps(
-                sampling_steps=sample_steps,
-                device=self.device,
-                solver_name=solver_name,
-                shift=shift,
+                sampling_steps=sample_steps, device=self.device, solver_name=solver_name, shift=shift
             )
             # print(timesteps_video)
             # print(timesteps_video[[0, 12, 24, 36, -1]])
@@ -211,8 +205,7 @@ class OviFusionEngine:
             if self.cpu_offload:
                 self.text_model.model = self.text_model.model.to(self.device)
             text_embeddings = self.text_model(
-                [text_prompt, video_negative_prompt, audio_negative_prompt],
-                self.text_model.device,
+                [text_prompt, video_negative_prompt, audio_negative_prompt], self.text_model.device
             )
             text_embeddings = [emb.to(self.target_dtype).to(self.device) for emb in text_embeddings]
 
@@ -243,20 +236,12 @@ class OviFusionEngine:
                     )  # c 1 h w
                     # print(f"latent_images: {latents_images.shape}")
                 latents_images = latents_images.to(self.target_dtype)
-                video_latent_h, video_latent_w = (
-                    latents_images.shape[2],
-                    latents_images.shape[3],
-                )
+                video_latent_h, video_latent_w = (latents_images.shape[2], latents_images.shape[3])
                 if self.cpu_offload:
                     self.offload_to_cpu(self.vae_model_video.model)
 
             video_noise = torch.randn(
-                (
-                    self.video_latent_channel,
-                    self.video_latent_length,
-                    video_latent_h,
-                    video_latent_w,
-                ),
+                (self.video_latent_channel, self.video_latent_length, video_latent_h, video_latent_w),
                 device=self.device,
                 dtype=self.target_dtype,
                 generator=torch.Generator(device=self.device).manual_seed(seed),
@@ -270,10 +255,7 @@ class OviFusionEngine:
 
             # Calculate sequence lengths from actual latents
             max_seq_len_audio = audio_noise.shape[0]  # L dimension from latents_audios shape [1, L, D]
-            _patch_size_h, _patch_size_w = (
-                self.model.video_model.patch_size[1],
-                self.model.video_model.patch_size[2],
-            )
+            _patch_size_h, _patch_size_w = (self.model.video_model.patch_size[1], self.model.video_model.patch_size[2])
             max_seq_len_video = (
                 video_noise.shape[1] * video_noise.shape[2] * video_noise.shape[3] // (_patch_size_h * _patch_size_w)
             )  # f * h * w from [1, c, f, h, w]
@@ -287,11 +269,7 @@ class OviFusionEngine:
             video_noisy_input = []
             audio_noisy_input = []
 
-            with torch.amp.autocast(
-                "cuda",
-                enabled=self.target_dtype != torch.float32,
-                dtype=self.target_dtype,
-            ):
+            with torch.amp.autocast("cuda", enabled=self.target_dtype != torch.float32, dtype=self.target_dtype):
                 for i, (t_v, t_a) in tqdm(enumerate(zip(timesteps_video, timesteps_audio))):
                     timestep_input = torch.full((1,), t_v, device=self.device)
 
@@ -319,10 +297,7 @@ class OviFusionEngine:
                     # print(pos_forward_args["vid_seq_len"])
 
                     pred_vid_pos, pred_audio_pos = self.model(
-                        vid=[video_noise],
-                        audio=[audio_noise],
-                        t=timestep_input,
-                        **pos_forward_args,
+                        vid=[video_noise], audio=[audio_noise], t=timestep_input, **pos_forward_args
                     )
 
                     # Negative (unconditional) forward pass
@@ -336,10 +311,7 @@ class OviFusionEngine:
                     }
 
                     pred_vid_neg, pred_audio_neg = self.model(
-                        vid=[video_noise],
-                        audio=[audio_noise],
-                        t=timestep_input,
-                        **neg_forward_args,
+                        vid=[video_noise], audio=[audio_noise], t=timestep_input, **neg_forward_args
                     )
 
                     # Apply classifier-free guidance
@@ -350,17 +322,11 @@ class OviFusionEngine:
 
                     # Update noise using scheduler
                     video_noise = scheduler_video.step(
-                        pred_video_guided.unsqueeze(0),
-                        t_v,
-                        video_noise.unsqueeze(0),
-                        return_dict=False,
+                        pred_video_guided.unsqueeze(0), t_v, video_noise.unsqueeze(0), return_dict=False
                     )[0].squeeze(0)
 
                     audio_noise = scheduler_audio.step(
-                        pred_audio_guided.unsqueeze(0),
-                        t_a,
-                        audio_noise.unsqueeze(0),
-                        return_dict=False,
+                        pred_audio_guided.unsqueeze(0), t_a, audio_noise.unsqueeze(0), return_dict=False
                     )[0].squeeze(0)
 
                 if self.cpu_offload:
@@ -426,11 +392,7 @@ class OviFusionEngine:
 
         elif solver_name == "euler":
             sample_scheduler = FlowMatchEulerDiscreteScheduler(shift=shift)
-            timesteps, sampling_steps = retrieve_timesteps(
-                sample_scheduler,
-                sampling_steps,
-                device=device,
-            )
+            timesteps, sampling_steps = retrieve_timesteps(sample_scheduler, sampling_steps, device=device)
 
         else:
             raise NotImplementedError("Unsupported solver.")
