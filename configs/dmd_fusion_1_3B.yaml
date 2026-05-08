@@ -62,7 +62,7 @@ audio_shape:
   - 20
 distribution_loss: dmd_fusion
 trainer: dmd_fusion
-data_path: /inspire/hdd/project/chineseculture/public/chunyu/data/hallolive_prompts/synthetic_prompts_30k.csv
+data_path: prompts/data/synthetic_prompts_32k.csv
 gradient_accumulation_steps: 1
 enable_rl_reward: false
 reward_beta: 1.0
@@ -83,4 +83,4 @@ load_raw_video: false
 max_steps: 6000
 video_loss_weight: 0.85
 audio_loss_weight: 0.15
-use_decoupled_dmd: true
+use_decoupled_dmd: false

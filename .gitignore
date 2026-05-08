@@ -36,3 +36,4 @@ core.*
 /reward_temp
 /detect_results
 /*.mp4
+/prompts/data

@@ -10,7 +10,7 @@ easydict
 lmdb
 
 # Hugging Face / model stack
-diffusers==0.31.0
+diffusers==0.38.0
 transformers==5.8.0
 tokenizers>=0.20.3
 sentencepiece
@@ -31,7 +31,7 @@ imageio-ffmpeg
 av==13.1.0
 moviepy==1.0.3
 decord
-scenedetect
+scenedetect==0.6.7.1
 matplotlib
 
 # Audio

@@ -25,10 +25,11 @@ sharding_strategy: hybrid_full
 lr: 2.0e-06 # 2.0e-06, 1.0e-05
 beta1: 0.9
 beta2: 0.999
-data_path: ode_data/ode_fusion_17000/lmdb
+data_path: ode_data/ode_data_30k/lmdb
 save_ckpt_dir: checkpoints
 save_ckpt_steps: 500
 batch_size: 4
+gradient_accumulation_steps: 2
 total_batch_size: 8
 distribution_loss: ode_fusion
 trainer: ode_fusion
