@@ -168,6 +168,14 @@ Training uses `torchrun` and FSDP. Before launching, check the following fields 
 - `save_ckpt_dir`: output directory for training checkpoints.
 - `sharding_strategy`, `generator_fsdp_wrap_strategy`, `real_score_fsdp_wrap_strategy`, `fake_score_fsdp_wrap_strategy`: distributed training strategy.
 
+### Training Dataset
+
+For convenience, we’ve open-sourced the training dataset `synthetic_prompts_32k.csv` in our [HuggingFace repo](https://huggingface.co/fudan-generative-ai/Hallo-Live). You can either download it manually or use the following command to download it directly:
+
+```bash
+hf download fudan-generative-ai/Hallo-Live synthetic_prompts_32k.csv --local-dir "prompts/data"
+```
+
 ### Stage 1: Dual-Stream ODE Initialization
 
 This repository provides utilities for generating ODE initialization data and packing it into LMDB:

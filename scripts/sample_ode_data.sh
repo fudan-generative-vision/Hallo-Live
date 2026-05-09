@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-OUTPUT_DIR="ode_data/ode_data_30k"
+OUTPUT_DIR="ode_data/ode_data_32k"
 TEXT_PROMPT="prompts/data/synthetic_prompts_32k.csv"
 
 torchrun --nnodes 1 --nproc_per_node 8 -m hallolive.utils.sample_ode_data \

@@ -1,5 +1,5 @@
 """
-Run a synthetic multi-GPU training-like workload.
+Run a simulated multi-GPU workload that mimics model training.
 
 Usage:
     python tools/fake_train.py
