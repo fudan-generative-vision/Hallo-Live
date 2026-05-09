@@ -420,8 +420,6 @@ class Trainer:
         return current_video
 
     def train(self):
-        start_step = self.step
-
         progress_bar = tqdm(
             initial=self.step, total=getattr(self.config, "max_steps", None), disable=not self.is_main_process
         )
@@ -480,7 +478,7 @@ class Trainer:
                 self.generator_ema = EMA_FSDP(self.model.generator, decay=self.config.ema_weight)
 
             # Save the model
-            if (not self.config.no_save) and (self.step - start_step) > 0 and self.step % self.config.save_ckpt_steps == 0:
+            if (not self.config.no_save) and self.step % self.config.save_ckpt_steps == 0:
                 torch.cuda.empty_cache()
                 self.save()
                 torch.cuda.empty_cache()

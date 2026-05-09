@@ -99,6 +99,14 @@ def main(config, args):
 
     # Load CSV data
     all_eval_data = list(zip(text_prompts, image_paths))
+    if existing_prompts:
+        original_count = len(all_eval_data)
+        all_eval_data = [(prompt, path) for prompt, path in all_eval_data if prompt not in existing_prompts]
+        if global_rank == 0:
+            logging.info(
+                f"✓ Filtered prompts from existing mapping: {len(all_eval_data)} remaining, "
+                f"skipped {original_count - len(all_eval_data)}"
+            )
 
     # Get SP configuration
     use_sp = get_sequence_parallel_state()
@@ -135,13 +143,6 @@ def main(config, args):
     for index, (text_prompt, image_path) in tqdm(
         enumerate(this_rank_eval_data), total=len(this_rank_eval_data), disable=(global_rank != 0)
     ):
-        if sp_rank == 0:
-            # Check if the prompt is already in the mapping first
-            if text_prompt in existing_prompts:
-                if global_rank == 0:
-                    logging.info("⏭️  Skipping generated prompt (already in mapping file)")
-                continue
-
         video_frame_height_width = config.get("video_frame_height_width", None)
         seed = config.get("seed", 100)
         solver_name = config.get("solver_name", "unipc")

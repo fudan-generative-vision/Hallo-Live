@@ -168,6 +168,14 @@ Training uses `torchrun` and FSDP. Before launching, check the following fields 
 - `save_ckpt_dir`: output directory for training checkpoints.
 - `sharding_strategy`, `generator_fsdp_wrap_strategy`, `real_score_fsdp_wrap_strategy`, `fake_score_fsdp_wrap_strategy`: distributed training strategy.
 
+### Training Dataset
+
+For convenience, we’ve open-sourced the training dataset `synthetic_prompts_32k.csv` in our [HuggingFace repo](https://huggingface.co/fudan-generative-ai/Hallo-Live). You can either download it manually or use the following command to download it directly:
+
+```bash
+hf download fudan-generative-ai/Hallo-Live synthetic_prompts_32k.csv --local-dir "prompts/data"
+```
+
 ### Stage 1: Dual-Stream ODE Initialization
 
 This repository provides utilities for generating ODE initialization data and packing it into LMDB:
@@ -235,15 +243,15 @@ This project builds on and benefits from the following open-source projects and 
 - [MMAudio](https://github.com/hkchengrex/MMAudio) for audio VAE components.
 - [VideoAlign](https://github.com/KwaiVGI/VideoAlign), [AudioBox Aesthetics](https://github.com/facebookresearch/audiobox-aesthetics) and [SyncNet](https://github.com/joonson/syncnet_python) for reward modeling.
 
-<!-- ## 📖 Citation
+## 📖 Citation
 
 If you find this repository useful, please cite:
 
 ```bibtex
-@article{li2026hallolive,
+@article{li2026hallo,
   title={Hallo-Live: Real-Time Streaming Joint Audio-Video Avatar Generation with Asynchronous Dual-Stream and Human-Centric Preference Distillation},
   author={Li, Chunyu and Li, Jiaye and Mei, Ruiqiao and Xia, Haoyuan and Zhu, Hao and Wang, Jingdong and Zhu, Siyu},
   journal={arXiv preprint arXiv:2604.23632},
   year={2026}
 }
-``` -->
+```

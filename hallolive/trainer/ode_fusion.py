@@ -1,5 +1,6 @@
 import gc
 import logging
+from contextlib import nullcontext
 from hallolive.utils.dataset import ODEFusionLMDBDataset, cycle
 from hallolive.model import ODEFusionRegression
 from collections import defaultdict
@@ -103,21 +104,28 @@ class Trainer:
         dataset = ODEFusionLMDBDataset(config.data_path, max_pair=getattr(config, "max_pair", int(1e8)))
         sampler = torch.utils.data.distributed.DistributedSampler(dataset, shuffle=True, drop_last=True)
         dataloader = torch.utils.data.DataLoader(dataset, batch_size=config.batch_size, sampler=sampler, num_workers=8)
+
+        self.gradient_accumulation_steps = getattr(config, "gradient_accumulation_steps", 1)
+        global_micro_batch_size = config.batch_size * self.world_size
+        self.total_batch_size = global_micro_batch_size * self.gradient_accumulation_steps
+
+        if self.is_main_process:
+            print(f"Text prompts dataset size: {len(dataset):,}")
+            print(
+                f"Gradient accumulation steps: {self.gradient_accumulation_steps} "
+                f"(global micro batch size: {global_micro_batch_size}, total batch size: {self.total_batch_size})"
+            )
+
         self.dataloader = cycle(dataloader)
 
         self.step = 0
-
-        ##############################################################################################################
-        # 7. (If resuming) Load the model and optimizer, lr_scheduler, ema's statedicts
-        # if getattr(config, "generator_ckpt", False):
-        #     print(f"Loading pretrained generator from {config.generator_ckpt}")
-        #     state_dict = torch.load(config.generator_ckpt, map_location="cpu")["generator"]
-        #     self.model.generator.load_state_dict(state_dict, strict=True)
-
-        ##############################################################################################################
-
         self.max_grad_norm = 10.0
         self.previous_time = None
+
+    def _gradient_sync_context(self, module, sync_gradients):
+        if sync_gradients or self.gradient_accumulation_steps == 1 or not hasattr(module, "no_sync"):
+            return nullcontext()
+        return module.no_sync()
 
     def save(self):
         # print("Start gathering distributed model states...")
@@ -132,11 +140,10 @@ class Trainer:
             torch.save(state_dict, os.path.join(self.output_path, f"checkpoint_model_{self.step:06d}", "model.pt"))
             print("Model saved to", os.path.join(self.output_path, f"checkpoint_model_{self.step:06d}", "model.pt"))
 
-    def train_one_step(self):
+    def _fwdbwd_one_micro_step(self, batch):
         self.model.eval()  # prevent any randomness (e.g. dropout)
 
         # Step 1: Get the next batch of text prompts
-        batch = next(self.dataloader)
         text_prompts = batch["prompts"]
 
         video_ode_latent = batch["ode_video_latent"].to(device=self.device, dtype=self.dtype)
@@ -173,22 +180,46 @@ class Trainer:
             gathered_unnormalized_loss = unnormalized_loss
             gathered_timestep = timestep
 
-        loss_breakdown = defaultdict(list)
-        stats = {}
+        (generator_loss / self.gradient_accumulation_steps).backward()
 
-        for index, t in enumerate(timestep):
-            loss_breakdown[str(int(t.item()) // 250 * 250)].append(unnormalized_loss[index].item())
+        return {
+            "generator_loss": generator_loss.detach(),
+            "unnormalized_loss": unnormalized_loss,
+            "timestep": timestep,
+        }
 
-        for key_t in loss_breakdown.keys():
-            stats["loss_at_time_" + key_t] = sum(loss_breakdown[key_t]) / len(loss_breakdown[key_t])
+    def train_one_step(self):
+        self.generator_optimizer.zero_grad(set_to_none=True)
 
-        self.generator_optimizer.zero_grad()
-        generator_loss.backward()
+        micro_step_outputs = []
+        for micro_step in range(self.gradient_accumulation_steps):
+            batch = next(self.dataloader)
+            sync_gradients = micro_step == self.gradient_accumulation_steps - 1
+            with self._gradient_sync_context(self.model.generator, sync_gradients):
+                micro_step_outputs.append(self._fwdbwd_one_micro_step(batch))
+
         if is_fsdp_wrapped(self.model.generator):
             generator_grad_norm = self.model.generator.clip_grad_norm_(self.max_grad_norm)
         else:
             generator_grad_norm = torch.nn.utils.clip_grad_norm_(self.trainable_params, self.max_grad_norm)
         self.generator_optimizer.step()
+
+        generator_loss_values = []
+        unnormalized_losses = []
+        timesteps = []
+        for output in micro_step_outputs:
+            generator_loss_values.append(output["generator_loss"])
+            unnormalized_losses.append(output["unnormalized_loss"])
+            timesteps.append(output["timestep"])
+
+        generator_loss = torch.stack(generator_loss_values).mean()
+        unnormalized_loss = torch.cat(unnormalized_losses, dim=0)
+        timestep = torch.cat(timesteps, dim=0)
+
+        loss_breakdown = defaultdict(list)
+        for index, t in enumerate(timestep):
+            loss_breakdown[str(int(t.item()) // 250 * 250)].append(unnormalized_loss[index].item())
+        stats = {f"loss_at_time_{key_t}": sum(values) / len(values) for key_t, values in loss_breakdown.items()}
 
         # Step 4: Logging
         if self.is_main_process and not self.disable_wandb:
@@ -212,7 +243,7 @@ class Trainer:
         while True:
             self.train_one_step()
 
-            if (not self.config.no_save) and self.step % self.config.save_ckpt_steps == 0:
+            if (not self.config.no_save) and self.step > 0 and self.step % self.config.save_ckpt_steps == 0:
                 self.save()
                 torch.cuda.empty_cache()
 

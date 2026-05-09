@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
-CSV_PATH=prompts/synthetic_prompts_17k.csv
-VIDEO_DIR=output/dmd_5B_data_17000_block_30_full_attn/step_2000_prompt_17000
-OUTPUT_PATH=output/dmd_5B_data_17000_block_30_full_attn/step_2000_prompt_17000/video_prompt_mappings.json
+CSV_PATH=prompts/data/synthetic_prompts_32k.csv
+VIDEO_DIR=ode_data/ode_data_32k/videos
+OUTPUT_PATH=ode_data/ode_data_32k/video_prompt_mappings.json
 
 python tools/create_video_mappings.py \
     --csv "${CSV_PATH}" \
