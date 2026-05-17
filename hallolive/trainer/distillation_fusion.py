@@ -194,50 +194,27 @@ class Trainer:
         critic_audio_lr = getattr(config, "lr_critic_audio", critic_base_lr)
 
         generator_param_groups, generator_param_counts = build_stream_param_groups(
-            self.model.generator,
-            base_lr=config.lr,
-            video_lr=generator_video_lr,
-            audio_lr=generator_audio_lr,
+            self.model.generator, base_lr=config.lr, video_lr=generator_video_lr, audio_lr=generator_audio_lr
         )
         critic_param_groups, critic_param_counts = build_stream_param_groups(
-            self.model.fake_score,
-            base_lr=critic_base_lr,
-            video_lr=critic_video_lr,
-            audio_lr=critic_audio_lr,
+            self.model.fake_score, base_lr=critic_base_lr, video_lr=critic_video_lr, audio_lr=critic_audio_lr
         )
 
         if self.is_main_process:
             print("--- Optimizer Stream LR ---")
             print(
-                f"Generator video lr: {generator_video_lr:.3e} "
-                f"({generator_param_counts['video'] / 1e6:.4f} M params)"
+                f"Generator video lr: {generator_video_lr:.3e} ({generator_param_counts['video'] / 1e6:.4f} M params)"
             )
             print(
-                f"Generator audio lr: {generator_audio_lr:.3e} "
-                f"({generator_param_counts['audio'] / 1e6:.4f} M params)"
+                f"Generator audio lr: {generator_audio_lr:.3e} ({generator_param_counts['audio'] / 1e6:.4f} M params)"
             )
-            print(
-                f"Generator shared lr: {config.lr:.3e} "
-                f"({generator_param_counts['shared'] / 1e6:.4f} M params)"
-            )
-            print(
-                f"Critic video lr: {critic_video_lr:.3e} "
-                f"({critic_param_counts['video'] / 1e6:.4f} M params)"
-            )
-            print(
-                f"Critic audio lr: {critic_audio_lr:.3e} "
-                f"({critic_param_counts['audio'] / 1e6:.4f} M params)"
-            )
-            print(
-                f"Critic shared lr: {critic_base_lr:.3e} "
-                f"({critic_param_counts['shared'] / 1e6:.4f} M params)"
-            )
+            print(f"Generator shared lr: {config.lr:.3e} ({generator_param_counts['shared'] / 1e6:.4f} M params)")
+            print(f"Critic video lr: {critic_video_lr:.3e} ({critic_param_counts['video'] / 1e6:.4f} M params)")
+            print(f"Critic audio lr: {critic_audio_lr:.3e} ({critic_param_counts['audio'] / 1e6:.4f} M params)")
+            print(f"Critic shared lr: {critic_base_lr:.3e} ({critic_param_counts['shared'] / 1e6:.4f} M params)")
 
         self.generator_optimizer = torch.optim.AdamW(
-            generator_param_groups,
-            lr=config.lr,
-            betas=(config.beta1, config.beta2),
-            weight_decay=config.weight_decay,
+            generator_param_groups, lr=config.lr, betas=(config.beta1, config.beta2), weight_decay=config.weight_decay
         )
 
         self.critic_optimizer = torch.optim.AdamW(
@@ -528,3 +505,6 @@ class Trainer:
             if hasattr(self.config, "max_steps") and self.step >= self.config.max_steps:
                 progress_bar.close()
                 break
+
+        if dist.is_available() and dist.is_initialized():
+            dist.destroy_process_group()

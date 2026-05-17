@@ -79,7 +79,6 @@ train_audio_stream_only: false
 trainable_modules:
   - self_attn.
   - cross_attn.
-load_raw_video: false
 max_steps: 6000
 video_loss_weight: 0.85
 audio_loss_weight: 0.15

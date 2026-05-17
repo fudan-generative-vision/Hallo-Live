@@ -178,7 +178,13 @@ hf download fudan-generative-ai/Hallo-Live synthetic_prompts_32k.csv --local-dir
 
 ### Stage 1: Dual-Stream ODE Initialization
 
-This repository provides utilities for generating ODE initialization data and packing it into LMDB:
+For convenience, we’ve provided a stage 1 ODE initialization checkpoint. You can manually download `hallolive_ode_init.pt` from our [HuggingFace repo](https://huggingface.co/fudan-generative-ai/Hallo-Live), or download it directly using the command line:
+
+```bash
+hf download fudan-generative-ai/Hallo-Live hallolive_ode_init.pt --local-dir "$MODEL_DIR/Hallo-Live"
+```
+
+We also provide utilities for generating ODE initialization data and packing it into LMDB, in case you want to perform stage 1 training on your own prompt dataset:
 
 ```bash
 bash scripts/sample_ode_data.sh
@@ -202,6 +208,12 @@ First, modify the `generator_ckpt` path in the config file to point to the check
 
 ```bash
 bash scripts/train_dmd_fusion_5B.sh
+```
+
+To perform multi-node training, such as on 16 or 32 GPUs, run the script:
+
+```bash
+bash scripts/train_dmd_fusion_5B_multinode.sh
 ```
 
 To reproduce HP-DMD, enable reward guidance in the DMD config:

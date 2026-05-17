@@ -4,9 +4,9 @@
 STEPS=(1500)
 
 # Experiments to evaluate. For multiple experiments: EXP_NAMES=("exp_a" "exp_b")
-EXP_NAMES=("dmd_5B_data_28k_audio_finetune_cfg_5")
+EXP_NAMES=("dmd_5B_data_32k")
 
-PROMPT_PATH="prompts/eval_prompts_30.csv"
+PROMPT_PATH="prompts/data/eval_prompts_30.csv"
 OUTPUT_DIR="eval_prompts_30"
 
 # Detect the number of visible GPUs

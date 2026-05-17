@@ -131,9 +131,6 @@ class DMDFusion(SelfForcingModel):
         self.text_encoder = WanTextEncoder(model_dir=model_dir)
         self.text_encoder.requires_grad_(False)
 
-        # self.vae = WanVAEWrapper()
-        # self.vae.requires_grad_(False)
-
         self.vae_video = init_wan_vae_2_2(model_dir, rank=device)
         self.vae_video.model.requires_grad_(False).eval()
         self.vae_video.model = self.vae_video.model.bfloat16()

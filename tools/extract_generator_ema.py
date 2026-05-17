@@ -64,11 +64,14 @@ def main():
     print(f"Loading checkpoint metadata from: {checkpoint_path}")
     state = torch.load(checkpoint_path, map_location="cpu", weights_only=True, mmap=True)
 
-    if "generator_ema" not in state:
+    if "generator_ema" in state:
+        generator_ema = state["generator_ema"]
+    elif "generator" in state:
+        generator_ema = state["generator"]
+    else:
         available_keys = ", ".join(state.keys()) if isinstance(state, dict) else type(state).__name__
-        raise KeyError(f"`generator_ema` not found in checkpoint. Available keys: {available_keys}")
+        raise KeyError(f"`generator_ema` and `generator` not found in checkpoint. Available keys: {available_keys}")
 
-    generator_ema = state["generator_ema"]
     if not isinstance(generator_ema, dict):
         raise TypeError(f"`generator_ema` should be a dict, got: {type(generator_ema).__name__}")
 
