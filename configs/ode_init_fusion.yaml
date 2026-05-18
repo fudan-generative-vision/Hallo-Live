@@ -10,11 +10,9 @@ denoising_step_list:
   - 500
   - 250
 warp_denoising_step: true # need to remove - 0 in denoising_step_list if warp_denoising_step is true
-num_train_timestep: 1000
 timestep_shift: 5.0
-guidance_scale: 3.0
 mixed_precision: true
-seed: 0
+seed: 103
 wandb_host: https://api.wandb.ai
 wandb_key: WANDB_KEY
 wandb_entity: WANDB_USERNAME
@@ -23,14 +21,15 @@ wandb_mode: offline
 wandb_save_dir: .
 sharding_strategy: hybrid_full
 lr: 2.0e-06 # 2.0e-06, 1.0e-05
+lr_video: 2.0e-06
+lr_audio: 2.0e-06
 beta1: 0.9
 beta2: 0.999
 data_path: ode_data/ode_data_32k/lmdb
 save_ckpt_dir: checkpoints
 save_ckpt_steps: 500
 batch_size: 4
-gradient_accumulation_steps: 2
-total_batch_size: 8
+gradient_accumulation_steps: 4
 distribution_loss: ode_fusion
 trainer: ode_fusion
 gradient_checkpointing: true

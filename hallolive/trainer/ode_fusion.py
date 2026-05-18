@@ -94,10 +94,55 @@ class Trainer:
                 device=self.device, dtype=torch.bfloat16 if config.mixed_precision else torch.float32
             )
 
-        self.trainable_params = [param for param in self.model.generator.parameters() if param.requires_grad]
+        def build_stream_param_groups(module, base_lr, video_lr, audio_lr):
+            stream_param_groups = {
+                "video": {"params": [], "lr": video_lr},
+                "audio": {"params": [], "lr": audio_lr},
+                "shared": {"params": [], "lr": base_lr},
+            }
+            stream_param_counts = {"video": 0, "audio": 0, "shared": 0}
+
+            for name, param in module.named_parameters():
+                if not param.requires_grad:
+                    continue
+
+                if "video_model." in name:
+                    stream_name = "video"
+                elif "audio_model." in name:
+                    stream_name = "audio"
+                else:
+                    stream_name = "shared"
+
+                stream_param_groups[stream_name]["params"].append(param)
+                stream_param_counts[stream_name] += param.numel()
+
+            optimizer_param_groups = []
+            for stream_name in ("video", "audio", "shared"):
+                if stream_param_groups[stream_name]["params"]:
+                    optimizer_param_groups.append(stream_param_groups[stream_name])
+
+            return optimizer_param_groups, stream_param_counts
+
+        generator_video_lr = getattr(config, "lr_video", config.lr)
+        generator_audio_lr = getattr(config, "lr_audio", config.lr)
+        generator_param_groups, generator_param_counts = build_stream_param_groups(
+            self.model.generator, base_lr=config.lr, video_lr=generator_video_lr, audio_lr=generator_audio_lr
+        )
+
+        if self.is_main_process:
+            print("--- Optimizer Stream LR ---")
+            print(
+                f"Generator video lr: {generator_video_lr:.3e} ({generator_param_counts['video'] / 1e6:.4f} M params)"
+            )
+            print(
+                f"Generator audio lr: {generator_audio_lr:.3e} ({generator_param_counts['audio'] / 1e6:.4f} M params)"
+            )
+            print(f"Generator shared lr: {config.lr:.3e} ({generator_param_counts['shared'] / 1e6:.4f} M params)")
+
+        self.trainable_params = [param for group in generator_param_groups for param in group["params"]]
 
         self.generator_optimizer = torch.optim.AdamW(
-            self.trainable_params, lr=config.lr, betas=(config.beta1, config.beta2), weight_decay=config.weight_decay
+            generator_param_groups, lr=config.lr, betas=(config.beta1, config.beta2), weight_decay=config.weight_decay
         )
 
         # Step 3: Initialize the dataloader
@@ -110,7 +155,7 @@ class Trainer:
         self.total_batch_size = global_micro_batch_size * self.gradient_accumulation_steps
 
         if self.is_main_process:
-            print(f"Text prompts dataset size: {len(dataset):,}")
+            print(f"ODE dataset size: {len(dataset):,}")
             print(
                 f"Gradient accumulation steps: {self.gradient_accumulation_steps} "
                 f"(global micro batch size: {global_micro_batch_size}, total batch size: {self.total_batch_size})"
@@ -267,3 +312,6 @@ class Trainer:
             if hasattr(self.config, "max_steps") and self.step >= (self.config.max_steps + 1):
                 progress_bar.close()
                 break
+
+        if dist.is_available() and dist.is_initialized():
+            dist.destroy_process_group()

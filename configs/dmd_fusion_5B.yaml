@@ -1,5 +1,4 @@
-generator_ckpt: checkpoints/ode_init_fusion_5b_strict_17000_block_30/checkpoint_model_003000/model.pt
-# generator_ckpt: checkpoints/dmd_5B_data_17000_audio_init/checkpoint_model_005000/model.pt
+generator_ckpt: checkpoints/ode_init_5B_data_32k_grad_4/checkpoint_model_002000/model.pt
 real_score_ckpt: /inspire/hdd/project/chineseculture/public/chunyu/model/Ovi/model.safetensors
 fake_score_ckpt: /inspire/hdd/project/chineseculture/public/chunyu/model/Ovi/model.safetensors
 model_dir: /inspire/hdd/project/chineseculture/public/chunyu/model
@@ -67,7 +66,7 @@ audio_shape:
 distribution_loss: dmd_fusion
 trainer: dmd_fusion
 data_path: prompts/data/synthetic_prompts_32k.csv
-gradient_accumulation_steps: 1
+gradient_accumulation_steps: 4
 enable_rl_reward: false
 reward_beta: 1.0
 reward_temp_dir: reward_temp
@@ -83,7 +82,6 @@ train_audio_stream_only: false
 trainable_modules:
   - self_attn.
   - cross_attn.
-load_raw_video: false
 max_steps: 6000
 video_loss_weight: 0.85
 audio_loss_weight: 0.15

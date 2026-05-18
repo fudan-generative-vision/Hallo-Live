@@ -1,8 +1,4 @@
-generator_ckpt: checkpoints/dmd_5B_data_23k_dual_init_audio_lr_3/checkpoint_model_001500/model.pt
-# generator_ckpt: checkpoints/dmd_5B_data_23k_dual_init_cfg_5/checkpoint_model_001500/model.pt
-# generator_ckpt: checkpoints/ode_init_fusion_5b_strict_17000_block_30/checkpoint_model_003000/model.pt
-# generator_ckpt: checkpoints/dmd_5B_data_17000_audio_finetune/checkpoint_model_004500/model.pt
-# generator_ckpt: checkpoints/dmd_5B_data_17000_block_30_full_attn/checkpoint_model_002000/model.pt
+generator_ckpt: checkpoints/dmd_5B_data_32k/checkpoint_model_001500/model.pt
 real_score_ckpt: /inspire/hdd/project/chineseculture/public/chunyu/model/Ovi/model.safetensors
 fake_score_ckpt: /inspire/hdd/project/chineseculture/public/chunyu/model/Ovi/model.safetensors
 model_dir: /inspire/hdd/project/chineseculture/public/chunyu/model
@@ -27,7 +23,7 @@ ts_schedule: false
 num_train_timestep: 1000
 timestep_shift: 5.0
 video_guidance_scale: 4.0
-audio_guidance_scale: 3.0
+audio_guidance_scale: 5.0
 denoising_loss_type: flow
 mixed_precision: true
 seed: 103
@@ -86,7 +82,6 @@ train_audio_stream_only: true
 trainable_modules:
   - self_attn.
   - cross_attn.
-load_raw_video: false
 max_steps: 10000
 video_loss_weight: 0
 audio_loss_weight: 0.15

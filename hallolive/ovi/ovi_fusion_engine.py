@@ -219,12 +219,6 @@ class OviFusionEngine:
             text_embeddings_video_neg = text_embeddings[1]
             text_embeddings_audio_neg = text_embeddings[2]
 
-            # print("--------++---------")
-            # print(text_embeddings_audio_pos.shape)
-            # print(text_embeddings_video_pos.shape)
-            # print(text_embeddings_video_neg.shape)
-            # print(text_embeddings_audio_neg.shape)
-
             if is_i2v:
                 if self.cpu_offload:
                     self.vae_model_video.model = self.vae_model_video.model.to(self.device)
@@ -287,14 +281,6 @@ class OviFusionEngine:
                         "audio_seq_len": max_seq_len_audio,
                         "first_frame_is_clean": is_i2v,
                     }
-
-                    # print("---------------++++++++---")
-                    # print(video_noise.shape)
-                    # print(audio_noise.shape)
-                    # print(timestep_input.shape)
-                    # print(pos_forward_args["audio_context"][0].shape)
-                    # print(pos_forward_args["vid_context"][0].shape)
-                    # print(pos_forward_args["vid_seq_len"])
 
                     pred_vid_pos, pred_audio_pos = self.model(
                         vid=[video_noise], audio=[audio_noise], t=timestep_input, **pos_forward_args

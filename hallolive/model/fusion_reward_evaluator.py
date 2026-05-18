@@ -174,7 +174,9 @@ class FusionRewardEvaluator:
                 self._move_audiobox_to(self.device)
             outputs = self.audiobox_predictor.forward([{"path": output_audio_path}])
             first_output = outputs[0]
-            audio_score = sum(first_output[key] for key in ("CE", "CU", "PC", "PQ"))
+            audio_score = sum(
+                first_output[key] for key in ("CE", "CU", "PQ")
+            )  # Production Complexity is not an indicator of audio quality
             if self.reward_model_cpu_offload:
                 self._move_audiobox_to("cpu")
 

@@ -49,7 +49,13 @@ The framework of *Hallo-Live*. **Top left**: Stage I training adapts a pretraine
 
 ## 🎬 Demo
 
-Click the prompt preview to expand the full text.
+### Main Demo
+
+The main demo showcases Hallo-Live’s real-time text-driven audio-video generation capabilities across anime-style characters, realistic human subjects, and multi-speaker scenarios.
+
+https://github.com/user-attachments/assets/21b91995-610e-4733-b31c-79fb063fcf02
+
+The following demos show each individual video along with its corresponding prompt. Click the prompt preview to expand the full text.
 
 <table class="center" width="100%">
   <colgroup>
@@ -107,12 +113,12 @@ Click the prompt preview to expand the full text.
   <tr>
     <td width="50%">
       <details>
-        <summary>3D anime office scene, man reviewing the numbers...</summary>
-        3D anime cartoon style, polished toon-shaded character rendering, soft stylized materials, expressive face and eyes, smooth animation-ready posing, clear mouth shapes for readable lip sync. In a quiet office with fluorescent overhead lights reflecting on a glass partition, a man in a blue button-down shirt sits in a close-up shot. Dust motes float in the light beams near his shoulder. His face is evenly lit, mouth clearly visible and sharp from the first frame. He holds a black pen in his right hand, resting on a notebook; the pen remains visible and stationary throughout. He blinks slowly, then speaks with calm emphasis, lips forming words cleanly. Both hands remain visible at desk level; no objects pass in front of his face. &lt;S&gt;I reviewed the numbers twice this morning.&lt;E&gt; &lt;S&gt;Everything checks out on our end.&lt;E&gt; &lt;AUDCAP&gt;Low hum of office HVAC; clear male voice with neutral accent; soft pen tap on paper; no music.&lt;ENDAUDCAP&gt;
+        <summary>3D anime room scene, boy playing guitar...</summary>
+        3D anime cartoon style, polished toon-shaded character rendering, soft stylized materials, expressive face and eyes, smooth animation-ready posing, clear mouth shapes for readable lip sync. Tight-medium shot of a boy in a room, chest-up, lit by computer monitor glow. Screen reflection shines in his eyes. He wears a hoodie, drawstrings hanging still. He holds a guitar neck, frets visible under his fingers. Mouth is clear in the blueish light. Right hand strums slowly; left hand holds chord. Posters on wall blurred behind. No head banging, stable posture. &lt;S&gt;I finally learned the chorus.&lt;E&gt; &lt;S&gt;It sounds pretty good.&lt;E&gt; &lt;AUDCAP&gt;Young male voice, proud; guitar strum sound; fan hum; no music.&lt;ENDAUDCAP&gt;
       </details>
     </td>
     <td width="50%">
-      <video src=https://github.com/user-attachments/assets/48d4782a-8805-4ea3-8005-4859ddaf4d37 controls preload="metadata" width="100%"></video>
+      <video src=https://github.com/user-attachments/assets/9af70b95-2824-4ca4-a2e9-ce315f829de9 controls preload="metadata" width="100%"></video>
     </td>
   </tr>
 </table>
@@ -178,7 +184,13 @@ hf download fudan-generative-ai/Hallo-Live synthetic_prompts_32k.csv --local-dir
 
 ### Stage 1: Dual-Stream ODE Initialization
 
-This repository provides utilities for generating ODE initialization data and packing it into LMDB:
+For convenience, we’ve provided a stage 1 ODE initialization checkpoint. You can manually download `hallolive_ode_init.pt` from our [HuggingFace repo](https://huggingface.co/fudan-generative-ai/Hallo-Live), or download it directly using the command line:
+
+```bash
+hf download fudan-generative-ai/Hallo-Live hallolive_ode_init.pt --local-dir "$MODEL_DIR/Hallo-Live"
+```
+
+We also provide utilities for generating ODE initialization data and packing it into LMDB, in case you want to perform stage 1 training on your own prompt dataset:
 
 ```bash
 bash scripts/sample_ode_data.sh
@@ -202,6 +214,12 @@ First, modify the `generator_ckpt` path in the config file to point to the check
 
 ```bash
 bash scripts/train_dmd_fusion_5B.sh
+```
+
+To perform multi-node training, such as on 16 or 32 GPUs, run the script:
+
+```bash
+bash scripts/train_dmd_fusion_5B_multinode.sh
 ```
 
 To reproduce HP-DMD, enable reward guidance in the DMD config:
