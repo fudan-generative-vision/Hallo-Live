@@ -1,8 +1,8 @@
 import argparse
 from omegaconf import OmegaConf
 import wandb
-from hallolive.trainer.ode_fusion import Trainer as ODEFusionTrainer
-from hallolive.trainer.distillation_fusion import Trainer as DMDFusionTrainer
+from hallolive.trainer.dual_stream_ode_trainer import Trainer as DualStreamODETrainer
+from hallolive.trainer.dual_stream_dmd_trainer import Trainer as DualStreamDMDTrainer
 from hallolive.utils.config import add_args_to_config
 
 
@@ -22,10 +22,10 @@ def main():
     config = OmegaConf.merge(default_config, config)
     config = add_args_to_config(config, args)
 
-    if config.trainer == "ode_fusion":
-        trainer = ODEFusionTrainer(config)
-    elif config.trainer == "dmd_fusion":
-        trainer = DMDFusionTrainer(config)
+    if config.trainer == "dual_stream_ode":
+        trainer = DualStreamODETrainer(config)
+    elif config.trainer == "dual_stream_dmd":
+        trainer = DualStreamDMDTrainer(config)
     else:
         raise ValueError(f"Unknown trainer: {config.trainer}")
     trainer.train()

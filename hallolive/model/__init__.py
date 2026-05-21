@@ -1,4 +1,4 @@
-from .ode_fusion_regression import ODEFusionRegression
-from .dmd_fusion import DMDFusion
+from .dual_stream_ode_model import DualStreamODEModel
+from .dual_stream_dmd_model import DualStreamDMDModel
 
-__all__ = ["ODEFusionRegression", "DMDFusion"]
+__all__ = ["DualStreamODEModel", "DualStreamDMDModel"]

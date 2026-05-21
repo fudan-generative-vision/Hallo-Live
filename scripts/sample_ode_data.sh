@@ -13,6 +13,6 @@ python tools/create_video_mappings.py \
 	--video_dir "${OUTPUT_DIR}/videos" \
 	--output_path "${OUTPUT_DIR}/video_prompt_mappings.json"
 
-python -m hallolive.utils.create_lmdb_fusion --data_path "${OUTPUT_DIR}/pt_files" --lmdb_path "${OUTPUT_DIR}/lmdb"
+python -m hallolive.utils.create_lmdb --data_path "${OUTPUT_DIR}/pt_files" --lmdb_path "${OUTPUT_DIR}/lmdb"
 
 python tools/occupy_gpu.py

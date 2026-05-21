@@ -4,14 +4,14 @@ import torch
 import os
 from hallolive.utils.misc import load_ckpt, safe_load_state_dict, normalize_scalar_across_ranks
 
-from hallolive.model.base_fusion import SelfForcingModel
+from hallolive.model.base_model import SelfForcingModel
 from hallolive.utils.wan_wrapper import WanTextEncoder
 from hallolive.utils.fusion_wrapper import FusionDiffusionWrapper
 from hallolive.ovi.utils.model_loading_utils import init_mmaudio_vae, init_wan_vae_2_2
-from hallolive.model.fusion_reward_evaluator import FusionRewardEvaluator
+from hallolive.model.multimodal_reward_evaluator import MultimodalRewardEvaluator
 
 
-class DMDFusion(SelfForcingModel):
+class DualStreamDMDModel(SelfForcingModel):
     def __init__(self, config, device):
         """
         Initialize the DMD (Distribution Matching Distillation) module.
@@ -95,7 +95,7 @@ class DMDFusion(SelfForcingModel):
     def _initialize_models(self, config, device):
         model_dir = getattr(config, "model_dir", "model")
         if getattr(config, "enable_rl_reward", False):
-            self.reward_evaluator: FusionRewardEvaluator = FusionRewardEvaluator(
+            self.reward_evaluator: MultimodalRewardEvaluator = MultimodalRewardEvaluator(
                 model_dir=model_dir,
                 temp_root=os.path.join(config.reward_temp_dir, config.exp_name),
                 reward_model_cpu_offload=config.reward_model_cpu_offload,

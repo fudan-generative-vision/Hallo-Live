@@ -4,7 +4,7 @@ from torch import nn
 import torch.distributed as dist
 import torch
 
-from hallolive.pipeline import SelfForcingTrainingFusionPipeline
+from hallolive.pipeline import DualStreamSelfForcingPipeline
 from hallolive.utils.loss import get_denoising_loss
 
 
@@ -193,7 +193,7 @@ class SelfForcingModel(BaseModel):
         Here we encapsulate the inference code with a model-dependent outside function.
         We pass our FSDP-wrapped modules into the pipeline to save memory.
         """
-        self.inference_pipeline = SelfForcingTrainingFusionPipeline(
+        self.inference_pipeline = DualStreamSelfForcingPipeline(
             denoising_step_list=self.denoising_step_list,
             scheduler=self.scheduler,
             generator=self.generator,

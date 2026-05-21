@@ -1,15 +1,126 @@
+import time
+from concurrent.futures import ThreadPoolExecutor
 from typing import List, Optional
+
 import torch
 
 from hallolive.utils.wan_wrapper import WanTextEncoder
 from hallolive.utils.fusion_wrapper import FusionDiffusionWrapper
 from hallolive.ovi.utils.model_loading_utils import init_mmaudio_vae, init_wan_vae_2_2
+from hallolive.ovi.modules.vae2_2 import unpatchify
 from einops import rearrange
 
 from hallolive.utils.memory import gpu, get_cuda_free_memory_gb, move_model_to_device_with_memory_preservation
 
 
-class CausalInferenceFusionPipeline(torch.nn.Module):
+class _ParallelVAEBlockDecoder:
+    def __init__(self, vae_video, vae_audio, device: torch.device):
+        self.vae_video = vae_video
+        self.vae_audio = vae_audio
+        self.device = device
+        self.executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="parallel-vae-decode")
+        self.futures = []
+        self.video_first_chunk = True
+
+        with torch.cuda.device(self.device):
+            self.stream = torch.cuda.Stream(device=self.device)
+            self.vae_video.model.clear_cache()
+
+    def submit(
+        self,
+        video_latents: Optional[torch.Tensor],
+        audio_latents: Optional[torch.Tensor],
+        ready_event: Optional[torch.cuda.Event] = None,
+    ):
+        future = self.executor.submit(self._decode_block, video_latents, audio_latents, ready_event)
+        self.futures.append(future)
+
+    def finish(self):
+        video_blocks = []
+        audio_blocks = []
+        try:
+            for future in self.futures:
+                video_block, audio_block = future.result()
+                if video_block is not None:
+                    video_blocks.append(video_block)
+                if audio_block is not None:
+                    audio_blocks.append(audio_block)
+        finally:
+            self.executor.shutdown(wait=True)
+            with torch.cuda.device(self.device):
+                self.vae_video.model.clear_cache()
+
+        with torch.cuda.device(self.device), torch.cuda.stream(self.stream):
+            video = torch.cat(video_blocks, dim=2) if video_blocks else None
+            audio = torch.cat(audio_blocks, dim=-1) if audio_blocks else None
+            self.stream.synchronize()
+        return video, audio
+
+    def decode_full_audio(self, audio_latents: torch.Tensor) -> torch.Tensor:
+        with torch.cuda.device(self.device), torch.cuda.stream(self.stream), torch.inference_mode():
+            audio_latents = audio_latents.to(device=self.device, dtype=self.vae_audio.dtype, non_blocking=True)
+            audio = self.vae_audio.wrapped_decode(audio_latents.permute(0, 2, 1).contiguous())
+            self.stream.synchronize()
+            return audio
+
+    def _decode_block(
+        self,
+        video_latents: Optional[torch.Tensor],
+        audio_latents: Optional[torch.Tensor],
+        ready_event: Optional[torch.cuda.Event],
+    ):
+        if ready_event is not None:
+            ready_event.synchronize()
+
+        with torch.cuda.device(self.device), torch.cuda.stream(self.stream), torch.inference_mode():
+            video = None
+            audio = None
+
+            if video_latents is not None:
+                video_latents_on_vae = video_latents.to(
+                    device=self.device, dtype=self.vae_video.dtype, non_blocking=True
+                )
+                video = self._decode_video_block(video_latents_on_vae)
+
+            if audio_latents is not None:
+                audio_latents_on_vae = audio_latents.to(
+                    device=self.device, dtype=self.vae_audio.dtype, non_blocking=True
+                )
+                audio = self.vae_audio.wrapped_decode(audio_latents_on_vae.permute(0, 2, 1).contiguous())
+
+            self.stream.synchronize()
+
+            return video, audio
+
+    def _decode_video_block(self, video_latents: torch.Tensor) -> torch.Tensor:
+        z = video_latents.permute(0, 2, 1, 3, 4).contiguous()
+        model = self.vae_video.model
+        scale = self.vae_video.scale
+
+        with torch.amp.autocast("cuda", dtype=self.vae_video.dtype):
+            if isinstance(scale[0], torch.Tensor):
+                z = z / scale[1].view(1, model.z_dim, 1, 1, 1) + scale[0].view(1, model.z_dim, 1, 1, 1)
+            else:
+                z = z / scale[1] + scale[0]
+
+            x = model.conv2(z)
+            outputs = []
+            for frame_idx in range(x.shape[2]):
+                model._conv_idx = [0]
+                outputs.append(
+                    model.decoder(
+                        x[:, :, frame_idx : frame_idx + 1],
+                        feat_cache=model._feat_map,
+                        feat_idx=model._conv_idx,
+                        first_chunk=self.video_first_chunk,
+                    )
+                )
+                self.video_first_chunk = False
+
+            return unpatchify(torch.cat(outputs, dim=2), patch_size=2).float().clamp_(-1, 1)
+
+
+class DualStreamCausalInferencePipeline(torch.nn.Module):
     def __init__(self, config, device, generator=None, text_encoder=None, vae=None):
         super().__init__()
         cpu_device = torch.device("cpu")
@@ -99,6 +210,36 @@ class CausalInferenceFusionPipeline(torch.nn.Module):
             )
         return audio_window[:, :target_num_frames]
 
+    @staticmethod
+    def resolve_vae_decode_device(
+        diffusion_device: torch.device, requested_device: Optional[str] = None
+    ) -> torch.device:
+        diffusion_index = diffusion_device.index if diffusion_device.index is not None else torch.cuda.current_device()
+        if requested_device is not None:
+            vae_decode_device = torch.device(requested_device)
+        else:
+            if torch.cuda.device_count() < 2:
+                raise RuntimeError("--parallel_vae_decode requires at least two visible CUDA devices.")
+            vae_decode_device = torch.device(f"cuda:{(diffusion_index + 1) % torch.cuda.device_count()}")
+
+        if vae_decode_device.type != "cuda":
+            raise ValueError("--vae_decode_device must be a CUDA device when --parallel_vae_decode is enabled.")
+
+        vae_decode_index = (
+            vae_decode_device.index if vae_decode_device.index is not None else torch.cuda.current_device()
+        )
+        if vae_decode_index == diffusion_index:
+            raise ValueError("VAE decode device must be different from the diffusion device for parallel decoding.")
+
+        return torch.device(f"cuda:{vae_decode_index}")
+
+    def encode_video_to_latent(self, video: torch.Tensor) -> torch.Tensor:
+        if hasattr(self.vae_video, "encode_to_latent"):
+            return self.vae_video.encode_to_latent(video)
+
+        latent = self.vae_video.wrapped_encode(video)
+        return latent.permute(0, 2, 1, 3, 4).contiguous()
+
     def inference(
         self,
         video_noise: torch.Tensor,
@@ -108,6 +249,8 @@ class CausalInferenceFusionPipeline(torch.nn.Module):
         return_latents: bool = False,
         profile: bool = False,
         low_memory: bool = False,
+        vae_decode_device: Optional[torch.device] = None,
+        decode_audio_blocks: bool = True,
     ) -> torch.Tensor:
         """
         Perform inference on the given noise and text prompts.
@@ -125,6 +268,13 @@ class CausalInferenceFusionPipeline(torch.nn.Module):
                 (batch_size, num_output_frames, num_channels, height, width).
                 It is normalized to be in the range [0, 1].
         """
+        parallel_vae_decode = vae_decode_device is not None
+        if parallel_vae_decode and initial_latent is not None:
+            raise NotImplementedError(
+                "--parallel_vae_decode currently supports the T2V streaming path only. "
+                "Run without --parallel_vae_decode for I2V or video-extension inference."
+            )
+
         batch_size, video_num_frames, video_num_channels, height, width = video_noise.shape
         batch_size, audio_num_frames, audio_num_channels = audio_noise.shape
 
@@ -171,8 +321,9 @@ class CausalInferenceFusionPipeline(torch.nn.Module):
             init_end = torch.cuda.Event(enable_timing=True)
             diffusion_start = torch.cuda.Event(enable_timing=True)
             diffusion_end = torch.cuda.Event(enable_timing=True)
-            vae_start = torch.cuda.Event(enable_timing=True)
-            vae_end = torch.cuda.Event(enable_timing=True)
+            if not parallel_vae_decode:
+                vae_start = torch.cuda.Event(enable_timing=True)
+                vae_end = torch.cuda.Event(enable_timing=True)
             block_times = []
             block_start = torch.cuda.Event(enable_timing=True)
             block_end = torch.cuda.Event(enable_timing=True)
@@ -236,6 +387,9 @@ class CausalInferenceFusionPipeline(torch.nn.Module):
         if self.independent_first_frame and initial_latent is None:
             video_all_num_frames = [1] + video_all_num_frames
         audio_current_start_frame = 0
+        parallel_decoder = None
+        if parallel_vae_decode:
+            parallel_decoder = _ParallelVAEBlockDecoder(self.vae_video, self.vae_audio, vae_decode_device)
 
         # Step 3: Temporal denoising loop
         for block_index, video_current_num_frames in enumerate(video_all_num_frames):
@@ -340,6 +494,20 @@ class CausalInferenceFusionPipeline(torch.nn.Module):
                 :, audio_current_start_frame:audio_current_end_frame
             ]
 
+            if parallel_decoder is not None:
+                audio_latents_for_decode = (
+                    audio_pred[:, audio_current_start_frame:audio_current_end_frame].detach()
+                    if decode_audio_blocks
+                    else None
+                )
+                ready_event = torch.cuda.Event()
+                ready_event.record(torch.cuda.current_stream(video_noise.device))
+                parallel_decoder.submit(
+                    video_pred.detach(),
+                    audio_latents_for_decode,
+                    ready_event=ready_event,
+                )
+
             # Step 3.3: rerun with timestep zero to update KV cache using clean context
             video_context_timestep = torch.ones_like(video_timestep) * self.config.context_noise
             clean_audio_input = audio_pred[:, :future_audio_end_frame]
@@ -376,32 +544,55 @@ class CausalInferenceFusionPipeline(torch.nn.Module):
             torch.cuda.synchronize()
             diffusion_time = diffusion_start.elapsed_time(diffusion_end)
             init_time = init_start.elapsed_time(init_end)
-            vae_start.record()
+            if not parallel_vae_decode:
+                vae_start.record()
 
         # Step 4: Decode the output
-        video = self.vae_video.wrapped_decode(rearrange(video_output, "b f c h w -> b c f h w"))  # [B, C, F, H, W]
-        audio = self.vae_audio.wrapped_decode(rearrange(audio_output, "b f c -> b c f"))  # [B, 1, num_samples]
+        if parallel_decoder is not None:
+            torch.cuda.synchronize(video_noise.device)
+            vae_wait_start = time.time()
+            video, audio = parallel_decoder.finish()
+            if audio is None:
+                audio = parallel_decoder.decode_full_audio(audio_output)
+            vae_drain_time = time.time() - vae_wait_start
+        else:
+            video = self.vae_video.wrapped_decode(rearrange(video_output, "b f c h w -> b c f h w"))  # [B, C, F, H, W]
+            audio = self.vae_audio.wrapped_decode(rearrange(audio_output, "b f c -> b c f"))  # [B, 1, num_samples]
 
         if profile:
-            # End VAE timing and synchronize CUDA
-            vae_end.record()
-            torch.cuda.synchronize()
-            vae_time = vae_start.elapsed_time(vae_end)
-            total_time = init_time + diffusion_time + vae_time
+            if parallel_vae_decode:
+                total_time = init_time / 1000 + diffusion_time / 1000 + vae_drain_time
+                print("Parallel VAE streaming profiling results:")
+                print(f"  - Initialization/caching time: {init_time / 1000:.2f} s")
+                print(f"  - Diffusion/cache wall time: {diffusion_time / 1000:.2f} s")
+                for i, block_time in enumerate(block_times):
+                    print(
+                        f"    - Block {i} generation time: {block_time / 1000:.2f} s ({100 * block_time / diffusion_time:.2f}% of diffusion)"
+                    )
+                print(f"  - Final VAE drain wait: {vae_drain_time:.2f} s")
+                print(f"  - Total measured time: {total_time:.2f} s")
+            else:
+                # End VAE timing and synchronize CUDA
+                vae_end.record()
+                torch.cuda.synchronize()
+                vae_time = vae_start.elapsed_time(vae_end)
+                total_time = init_time + diffusion_time + vae_time
 
-            print("Profiling results:")
-            print(f"  - Initialization/caching time: {init_time / 1000:.2f} s ({100 * init_time / total_time:.2f}%)")
-            print(
-                f"  - Diffusion generation time: {diffusion_time / 1000:.2f} s ({100 * diffusion_time / total_time:.2f}%)"
-            )
-
-            for i, block_time in enumerate(block_times):
+                print("Profiling results:")
                 print(
-                    f"    - Block {i} generation time: {block_time / 1000:.2f} s ({100 * block_time / diffusion_time:.2f}% of diffusion)"
+                    f"  - Initialization/caching time: {init_time / 1000:.2f} s ({100 * init_time / total_time:.2f}%)"
+                )
+                print(
+                    f"  - Diffusion generation time: {diffusion_time / 1000:.2f} s ({100 * diffusion_time / total_time:.2f}%)"
                 )
 
-            print(f"  - VAE decoding time: {vae_time / 1000:.2f} s ({100 * vae_time / total_time:.2f}%)")
-            print(f"  - Total time: {total_time / 1000:.2f} s")
+                for i, block_time in enumerate(block_times):
+                    print(
+                        f"    - Block {i} generation time: {block_time / 1000:.2f} s ({100 * block_time / diffusion_time:.2f}% of diffusion)"
+                    )
+
+                print(f"  - VAE decoding time: {vae_time / 1000:.2f} s ({100 * vae_time / total_time:.2f}%)")
+                print(f"  - Total time: {total_time / 1000:.2f} s")
 
         if return_latents:
             return video, audio, video_output, audio_output

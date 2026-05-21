@@ -55,7 +55,7 @@ class RewardOutputs:
     output_audio_path: str
 
 
-class FusionRewardEvaluator:
+class MultimodalRewardEvaluator:
     def __init__(
         self,
         model_dir: str,

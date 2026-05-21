@@ -63,8 +63,8 @@ audio_shape:
   - 1
   - 150
   - 20
-distribution_loss: dmd_fusion
-trainer: dmd_fusion
+distribution_loss: dual_stream_dmd
+trainer: dual_stream_dmd
 data_path: prompts/data/synthetic_prompts_32k.csv
 gradient_accumulation_steps: 1
 enable_rl_reward: false

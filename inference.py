@@ -1,6 +1,7 @@
 import argparse
 import os
 import time
+
 import torch
 from omegaconf import OmegaConf
 from tqdm import tqdm
@@ -9,8 +10,8 @@ import torch.distributed as dist
 from torch.utils.data import DataLoader, SequentialSampler, Subset
 
 import hallolive.utils.memory as memory_utils
-from hallolive.pipeline import causal_inference_fusion
-from hallolive.pipeline import CausalInferenceFusionPipeline
+from hallolive.pipeline import dual_stream_causal_inference
+from hallolive.pipeline import DualStreamCausalInferencePipeline
 from hallolive.utils.config import add_args_to_config
 from hallolive.utils.dataset import TextDataset, TextImagePairDataset
 from hallolive.utils.misc import set_seed
@@ -38,7 +39,7 @@ def setup_distributed(seed: int):
 
     # Some imported modules cache the target GPU during import time, so patch them after setting the rank device.
     memory_utils.gpu = device
-    causal_inference_fusion.gpu = device
+    dual_stream_causal_inference.gpu = device
 
     set_seed(seed)
     return device, local_rank, global_rank, world_size
@@ -55,6 +56,23 @@ def sample_noise(sample_seeds, shape, device, dtype):
 
 def main(config):
     device, local_rank, global_rank, world_size = setup_distributed(config.seed)
+    parallel_vae_decode = bool(getattr(config, "parallel_vae_decode", False))
+    parallel_vae_decode_full_audio = bool(getattr(config, "parallel_vae_decode_full_audio", False))
+    vae_decode_device = None
+    if parallel_vae_decode:
+        if world_size != 1:
+            raise RuntimeError(
+                "--parallel_vae_decode uses a second GPU inside one inference process. "
+                "Run torchrun with --nproc_per_node=1, or launch separate jobs with disjoint CUDA_VISIBLE_DEVICES."
+            )
+        if config.i2v:
+            raise NotImplementedError(
+                "--parallel_vae_decode currently supports the T2V streaming path only. "
+                "Run I2V without --parallel_vae_decode."
+            )
+        vae_decode_device = DualStreamCausalInferencePipeline.resolve_vae_decode_device(
+            device, getattr(config, "vae_decode_device", None)
+        )
 
     print(f"[Rank {global_rank}] Free VRAM {get_cuda_free_memory_gb(device):.2f} GB")
     low_memory = get_cuda_free_memory_gb(device) < 40
@@ -65,7 +83,7 @@ def main(config):
     t0 = time.time()
     generator_ckpt = getattr(config, "generator_ckpt", None)
     config.generator_meta_init = bool(generator_ckpt)
-    pipeline = CausalInferenceFusionPipeline(config, device=device)
+    pipeline = DualStreamCausalInferencePipeline(config, device=device)
     print(f"[Timer] Pipeline initialization: {time.time() - t0:.2f} seconds")
 
     if generator_ckpt:
@@ -95,8 +113,11 @@ def main(config):
     pipeline.generator.to(device=device, dtype=torch.bfloat16)
     if config.generator_meta_init:
         pipeline.generator.model.set_rope_params()
-    pipeline.vae_video.to(device=device, dtype=torch.bfloat16)
-    pipeline.vae_audio.to(device=device, dtype=torch.bfloat16)
+    vae_device = vae_decode_device if parallel_vae_decode else device
+    pipeline.vae_video.to(device=vae_device, dtype=torch.bfloat16)
+    pipeline.vae_audio.to(device=vae_device, dtype=torch.bfloat16)
+    if parallel_vae_decode:
+        print(f"[Rank {global_rank}] Diffusion GPU: {device}; VAE decode GPU: {vae_decode_device}")
     print(f"[Timer] Move models to GPU: {time.time() - t0:.2f} seconds")
 
     # Create dataset
@@ -146,7 +167,8 @@ def main(config):
 
             # Encode the input image as the first latent
             t_vae_encode = time.time()
-            initial_latent = pipeline.vae_video.encode_to_latent(image).to(device=device, dtype=torch.bfloat16)
+            image_for_vae = image.to(device=vae_device, dtype=torch.bfloat16, non_blocking=True)
+            initial_latent = pipeline.encode_video_to_latent(image_for_vae).to(device=device, dtype=torch.bfloat16)
             initial_latent = initial_latent.repeat(config.num_samples, 1, 1, 1, 1)
             print(f"[Timer] Sample {i} - VAE encode initial image: {time.time() - t_vae_encode:.2f} seconds")
 
@@ -176,6 +198,8 @@ def main(config):
             profile=config.profile,
             initial_latent=initial_latent,
             low_memory=low_memory,
+            vae_decode_device=vae_decode_device,
+            decode_audio_blocks=not parallel_vae_decode_full_audio,
         )
         torch.cuda.synchronize(device)  # Ensure all CUDA operations are complete
         print(f"[Timer] Sample {i} - Pipeline inference: {time.time() - t_inference:.2f} seconds")
@@ -222,6 +246,22 @@ if __name__ == "__main__":
     parser.add_argument("--profile", action="store_true", help="Whether to profile")
     parser.add_argument("--seed", type=int, default=None, help="Random seed")
     parser.add_argument("--num_samples", type=int, default=1, help="Number of samples to generate per prompt")
+    parser.add_argument(
+        "--parallel_vae_decode",
+        action="store_true",
+        help="Decode each generated streaming block on a second GPU while the diffusion GPU generates the next block",
+    )
+    parser.add_argument(
+        "--vae_decode_device",
+        type=str,
+        default=None,
+        help="CUDA device used by --parallel_vae_decode. Defaults to the next visible GPU.",
+    )
+    parser.add_argument(
+        "--parallel_vae_decode_full_audio",
+        action="store_true",
+        help="With --parallel_vae_decode, keep video block decoding overlapped but decode audio once from full latents.",
+    )
     args = parser.parse_args()
 
     config = OmegaConf.load(args.config_path)

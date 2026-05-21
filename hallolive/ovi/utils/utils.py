@@ -44,7 +44,7 @@ def get_arguments(args=argv[1:]):
 def get_argument_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument("--config-file", type=str, default=str(DEFAULT_CONFIG_FILE))
-    parser.add_argument("--output-dir", type=str, default="ode_data/ode_fusion")
+    parser.add_argument("--output-dir", type=str, default="ode_data/dual_stream_ode")
     parser.add_argument("--text-prompt", type=str, default="prompts/synthesize_5000.csv")
     parser.add_argument("--local_rank", type=int, default=-1, help="local_rank for distributed training on gpus")
 

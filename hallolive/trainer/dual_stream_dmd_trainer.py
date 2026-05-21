@@ -8,7 +8,7 @@ from hallolive.utils.distributed import EMA_FSDP, fsdp_wrap, fsdp_state_dict, la
 from hallolive.utils.misc import set_seed, merge_dict_list, count_params
 import torch.distributed as dist
 from omegaconf import OmegaConf
-from hallolive.model import DMDFusion
+from hallolive.model import DualStreamDMDModel
 import torch
 import shutil
 from tqdm import tqdm
@@ -62,12 +62,12 @@ class Trainer:
             shutil.copy(config.config_path, self.output_path)
 
         # Step 2: Initialize the model and optimizer
-        if config.distribution_loss == "dmd_fusion":
-            self.model = DMDFusion(config, device=self.device)
+        if config.distribution_loss == "dual_stream_dmd":
+            self.model = DualStreamDMDModel(config, device=self.device)
         else:
-            raise ValueError("Invalid distribution matching loss: only dmd_fusion is supported")
+            raise ValueError("Invalid distribution matching loss: only dual_stream_dmd is supported")
 
-        self.model: DMDFusion = self.model
+        self.model: DualStreamDMDModel = self.model
 
         if self.is_main_process:
             print(f"Generator parameters: {count_params(self.model.generator) / 1e9:.1f}B")
