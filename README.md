@@ -163,6 +163,16 @@ bash scripts/inference.sh
 
 Generated videos will be saved in `output_folder`.
 
+### Parallel VAE Decoding
+
+For faster inference on machines with at least two visible CUDA devices, you can overlap diffusion generation and VAE decoding by enabling parallel VAE decode:
+
+```bash
+bash scripts/inference_parallel_vae.sh
+```
+
+This mode keeps the diffusion model on the main GPU and moves the video/audio VAEs to a second GPU. It decodes generated video blocks in a background CUDA stream while the diffusion GPU continues generating the next block. By default, the VAE decode device is the next visible CUDA device after the diffusion device.
+
 ## 🏋️‍♂️ Training
 
 Training uses `torchrun` and FSDP. Before launching, check the following fields in the config:
