@@ -120,7 +120,7 @@ class _ParallelVAEBlockDecoder:
             return unpatchify(torch.cat(outputs, dim=2), patch_size=2).float().clamp_(-1, 1)
 
 
-class CausalInferenceFusionPipeline(torch.nn.Module):
+class DualStreamCausalInferencePipeline(torch.nn.Module):
     def __init__(self, config, device, generator=None, text_encoder=None, vae=None):
         super().__init__()
         cpu_device = torch.device("cpu")

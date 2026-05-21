@@ -3,7 +3,7 @@ Create a JSON mapping from video filename to text prompt.
 
 Usage:
     python tools/create_video_mappings.py
-    python tools/create_video_mappings.py --csv prompts/synthesize_new_20000.csv --video_dir ode_data/ode_fusion_20000/videos --output_path ode_data/ode_fusion_20000/video_prompt_mappings.json
+    python tools/create_video_mappings.py --csv prompts/data/synthetic_prompts_32k.csv --video_dir ode_data/ode_data_32k/videos --output_path ode_data/ode_data_32k/video_prompt_mappings.json
 """
 
 import os
@@ -88,19 +88,19 @@ if __name__ == "__main__":
     parser.add_argument(
         "--csv",
         dest="csv_path",
-        default="prompts/synthesize_new_20000.csv",
+        default="prompts/data/synthetic_prompts_32k.csv",
         help="Path to the CSV file containing prompts",
     )
     parser.add_argument(
         "--video_dir",
         dest="video_dir",
-        default="ode_data/ode_fusion_20000/videos",
+        default="ode_data/ode_data_32k/videos",
         help="Path to the directory that contains video files",
     )
     parser.add_argument(
         "--output_path",
         dest="output_path",
-        default="ode_data/ode_fusion_20000/video_prompt_mappings.json",
+        default="ode_data/ode_data_32k/video_prompt_mappings.json",
         help="Output path for the generated JSON mapping file",
     )
 

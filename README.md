@@ -210,12 +210,12 @@ The script performs three steps:
 
 1. Generate ODE trajectories with `hallolive.utils.sample_ode_data`.
 2. Build video-to-prompt mappings with `tools/create_video_mappings.py`.
-3. Convert latent `.pt` files into LMDB with `hallolive.utils.create_lmdb_fusion`.
+3. Convert latent `.pt` files into LMDB with `hallolive.utils.create_lmdb`.
 
 After the LMDB dataset is created, run the script for ODE initialization training:
 
 ```bash
-bash scripts/train_ode_fusion.sh
+bash scripts/train_ode_init.sh
 ```
 
 ### Stage 2: Self-Rollout + Dual-Stream DMD
@@ -223,13 +223,13 @@ bash scripts/train_ode_fusion.sh
 First, modify the `generator_ckpt` path in the config file to point to the checkpoint obtained after completing your ODE initialization training. Then run the script for DMD training:
 
 ```bash
-bash scripts/train_dmd_fusion_5B.sh
+bash scripts/train_dmd_5B.sh
 ```
 
 To perform multi-node training, such as on 16 or 32 GPUs, run the script:
 
 ```bash
-bash scripts/train_dmd_fusion_5B_multinode.sh
+bash scripts/train_dmd_5B_multinode.sh
 ```
 
 To reproduce HP-DMD, enable reward guidance in the DMD config:
@@ -249,7 +249,7 @@ video_loss_weight: 0
 audio_loss_weight: 0.15
 ```
 
-See `configs/dmd_fusion_5B_audio.yaml` for an example.
+See `configs/dual_stream_dmd_5B_audio.yaml` for an example.
 
 ## 📊 Evaluation
 

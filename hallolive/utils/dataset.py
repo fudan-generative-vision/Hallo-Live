@@ -25,7 +25,7 @@ class TextDataset(Dataset):
         return batch
 
 
-class ODEFusionLMDBDataset(Dataset):
+class DualStreamODELMDBDataset(Dataset):
     def __init__(self, data_path: str, max_pair: int = int(1e8)):
         self.env = lmdb.open(data_path, readonly=True, lock=False, readahead=False, meminit=False)
 

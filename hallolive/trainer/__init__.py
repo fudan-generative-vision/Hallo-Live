@@ -1,7 +1,7 @@
-from .ode_fusion import Trainer as ODEFusionTrainer
-from .distillation_fusion import Trainer as DMDFusionTrainer
+from .dual_stream_ode_trainer import Trainer as DualStreamODETrainer
+from .dual_stream_dmd_trainer import Trainer as DualStreamDMDTrainer
 
 __all__ = [
-    "ODEFusionTrainer",
-    "DMDFusionTrainer",
+    "DualStreamODETrainer",
+    "DualStreamDMDTrainer",
 ]

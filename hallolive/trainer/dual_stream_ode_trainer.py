@@ -1,8 +1,8 @@
 import gc
 import logging
 from contextlib import nullcontext
-from hallolive.utils.dataset import ODEFusionLMDBDataset, cycle
-from hallolive.model import ODEFusionRegression
+from hallolive.utils.dataset import DualStreamODELMDBDataset, cycle
+from hallolive.model import DualStreamODEModel
 from collections import defaultdict
 from hallolive.utils.misc import set_seed, count_params
 import torch.distributed as dist
@@ -63,8 +63,8 @@ class Trainer:
 
         # Step 2: Initialize the model and optimizer
 
-        assert config.distribution_loss == "ode_fusion", "Only ODE loss is supported for ODE training"
-        self.model = ODEFusionRegression(config, device=self.device)
+        assert config.distribution_loss == "dual_stream_ode", "Only ODE loss is supported for ODE training"
+        self.model = DualStreamODEModel(config, device=self.device)
 
         if self.is_main_process:
             print(f"Generator parameters: {count_params(self.model.generator) / 1e9:.1f}B")
@@ -146,7 +146,7 @@ class Trainer:
         )
 
         # Step 3: Initialize the dataloader
-        dataset = ODEFusionLMDBDataset(config.data_path, max_pair=getattr(config, "max_pair", int(1e8)))
+        dataset = DualStreamODELMDBDataset(config.data_path, max_pair=getattr(config, "max_pair", int(1e8)))
         sampler = torch.utils.data.distributed.DistributedSampler(dataset, shuffle=True, drop_last=True)
         dataloader = torch.utils.data.DataLoader(dataset, batch_size=config.batch_size, sampler=sampler, num_workers=8)
 

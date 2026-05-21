@@ -5,7 +5,7 @@ import torch
 import torch.distributed as dist
 
 
-class SelfForcingTrainingFusionPipeline:
+class DualStreamSelfForcingPipeline:
     def __init__(
         self,
         denoising_step_list: List[int],

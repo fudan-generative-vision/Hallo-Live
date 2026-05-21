@@ -3,7 +3,7 @@
 MODEL_DIR=/inspire/hdd/project/chineseculture/public/chunyu/model  # Set this to your model directory
 
 torchrun --nnodes=1 --nproc_per_node=1 inference.py \
-    --config_path configs/dmd_fusion_5B.yaml \
+    --config_path configs/dual_stream_dmd_5B.yaml \
 	--model_dir $MODEL_DIR \
     --output_folder output/demo_videos \
     --generator_ckpt ${MODEL_DIR}/Hallo-Live/hallolive_dit.pt \

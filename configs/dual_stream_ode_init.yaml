@@ -29,9 +29,9 @@ data_path: ode_data/ode_data_32k/lmdb
 save_ckpt_dir: checkpoints
 save_ckpt_steps: 500
 batch_size: 4
-gradient_accumulation_steps: 4
-distribution_loss: ode_fusion
-trainer: ode_fusion
+gradient_accumulation_steps: 1
+distribution_loss: dual_stream_ode
+trainer: dual_stream_ode
 gradient_checkpointing: true
 video_num_frame_per_block: 6
 audio_num_frame_per_block: 30

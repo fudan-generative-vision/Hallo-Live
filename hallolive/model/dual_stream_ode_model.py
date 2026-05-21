@@ -3,7 +3,7 @@ from typing import Tuple
 import torch
 import os
 
-from hallolive.model.base_fusion import BaseModel
+from hallolive.model.base_model import BaseModel
 from hallolive.utils.wan_wrapper import WanTextEncoder, WanVAEWrapper
 from hallolive.utils.fusion_wrapper import FusionDiffusionWrapper
 
@@ -21,7 +21,7 @@ def load_mova_state_dict(model, model_dir):
     safe_load_state_dict(model, mova_state_dict)
 
 
-class ODEFusionRegression(BaseModel):
+class DualStreamODEModel(BaseModel):
     def __init__(self, config, device):
         """
         Initialize the ODERegression module.

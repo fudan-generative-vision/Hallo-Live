@@ -10,7 +10,7 @@ export NCCL_DEBUG=INFO
 export NCCL_IB_DISABLE=0    # Ensure InfiniBand is active
 export NCCL_NET_GDR_LEVEL=2 # Enable GPU Direct RDMA
 
-CONFIG_PATH="configs/dmd_fusion_5B.yaml"
+CONFIG_PATH="configs/dual_stream_dmd_5B.yaml"
 EXP_NAME="dmd_5B_data_32k"
 
 source tools/utils.sh

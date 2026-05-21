@@ -1,7 +1,7 @@
-from .causal_inference_fusion import CausalInferenceFusionPipeline
-from .self_forcing_training_fusion import SelfForcingTrainingFusionPipeline
+from .dual_stream_causal_inference import DualStreamCausalInferencePipeline
+from .dual_stream_self_forcing import DualStreamSelfForcingPipeline
 
 __all__ = [
-    "CausalInferenceFusionPipeline",
-    "SelfForcingTrainingFusionPipeline",
+    "DualStreamCausalInferencePipeline",
+    "DualStreamSelfForcingPipeline",
 ]

@@ -10,8 +10,8 @@ import torch.distributed as dist
 from torch.utils.data import DataLoader, SequentialSampler, Subset
 
 import hallolive.utils.memory as memory_utils
-from hallolive.pipeline import causal_inference_fusion
-from hallolive.pipeline import CausalInferenceFusionPipeline
+from hallolive.pipeline import dual_stream_causal_inference
+from hallolive.pipeline import DualStreamCausalInferencePipeline
 from hallolive.utils.config import add_args_to_config
 from hallolive.utils.dataset import TextDataset, TextImagePairDataset
 from hallolive.utils.misc import set_seed
@@ -39,7 +39,7 @@ def setup_distributed(seed: int):
 
     # Some imported modules cache the target GPU during import time, so patch them after setting the rank device.
     memory_utils.gpu = device
-    causal_inference_fusion.gpu = device
+    dual_stream_causal_inference.gpu = device
 
     set_seed(seed)
     return device, local_rank, global_rank, world_size
@@ -70,7 +70,7 @@ def main(config):
                 "--parallel_vae_decode currently supports the T2V streaming path only. "
                 "Run I2V without --parallel_vae_decode."
             )
-        vae_decode_device = CausalInferenceFusionPipeline.resolve_vae_decode_device(
+        vae_decode_device = DualStreamCausalInferencePipeline.resolve_vae_decode_device(
             device, getattr(config, "vae_decode_device", None)
         )
 
@@ -83,7 +83,7 @@ def main(config):
     t0 = time.time()
     generator_ckpt = getattr(config, "generator_ckpt", None)
     config.generator_meta_init = bool(generator_ckpt)
-    pipeline = CausalInferenceFusionPipeline(config, device=device)
+    pipeline = DualStreamCausalInferencePipeline(config, device=device)
     print(f"[Timer] Pipeline initialization: {time.time() - t0:.2f} seconds")
 
     if generator_ckpt:

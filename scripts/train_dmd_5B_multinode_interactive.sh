@@ -10,8 +10,8 @@ MASTER_PORT=${MASTER_PORT:-29500}
 NNODES=${NNODES:-4} # Default to 4; can also be passed in externally
 NPROC_PER_NODE=${NPROC_PER_NODE:-8}
 
-CONFIG_PATH="configs/dmd_fusion_5B.yaml"
-SAVE_CKPT_DIR="checkpoints/dmd_fusion_5b_strict"
+CONFIG_PATH="configs/dual_stream_dmd_5B.yaml"
+SAVE_CKPT_DIR="checkpoints/dual_stream_dmd_5b_strict"
 # ===============================================
 
 # Flexible NODE_RANK resolution:
