@@ -54,6 +54,20 @@ def sample_noise(sample_seeds, shape, device, dtype):
     return torch.stack(noise, dim=0)
 
 
+def get_noise_shapes(config):
+    image_or_video_shape = [int(dim) for dim in config.image_or_video_shape]
+    audio_shape = [int(dim) for dim in config.audio_shape]
+    num_output_frames = int(config.num_output_frames)
+
+    video_latent_shape = tuple(image_or_video_shape[2:])
+    audio_num_output_frames = num_output_frames * 5
+    video_noise_shape = (num_output_frames, *video_latent_shape)
+    i2v_video_noise_shape = (num_output_frames - 1, *video_latent_shape)
+    audio_noise_shape = (audio_num_output_frames, audio_shape[2])
+
+    return video_noise_shape, i2v_video_noise_shape, audio_noise_shape
+
+
 def main(config):
     device, local_rank, global_rank, world_size = setup_distributed(config.seed)
     parallel_vae_decode = bool(getattr(config, "parallel_vae_decode", False))
@@ -138,6 +152,7 @@ def main(config):
 
     sampler = SequentialSampler(rank_dataset)
     dataloader = DataLoader(rank_dataset, batch_size=1, sampler=sampler, num_workers=0, drop_last=False)
+    video_noise_shape, i2v_video_noise_shape, audio_noise_shape = get_noise_shapes(config)
 
     # Create output directory (only on main process to avoid race conditions)
     if local_rank == 0:
@@ -172,21 +187,16 @@ def main(config):
             initial_latent = initial_latent.repeat(config.num_samples, 1, 1, 1, 1)
             print(f"[Timer] Sample {i} - VAE encode initial image: {time.time() - t_vae_encode:.2f} seconds")
 
-            video_noise = sample_noise(
-                sample_seeds, (config.num_output_frames - 1, 48, 32, 62), device=device, dtype=torch.bfloat16
-            )
-            audio_noise = sample_noise(sample_seeds, (150, 20), device=device, dtype=torch.bfloat16)
+            video_noise = sample_noise(sample_seeds, i2v_video_noise_shape, device=device, dtype=torch.bfloat16)
+            audio_noise = sample_noise(sample_seeds, audio_noise_shape, device=device, dtype=torch.bfloat16)
         else:
             # For text-to-video, batch is just the text prompt
             prompt = batch["prompts"][0]
             prompts = [prompt] * config.num_samples
             initial_latent = None
 
-            video_noise = sample_noise(
-                sample_seeds, (config.num_output_frames, 48, 32, 62), device=device, dtype=torch.bfloat16
-            )
-
-            audio_noise = sample_noise(sample_seeds, (150, 20), device=device, dtype=torch.bfloat16)
+            video_noise = sample_noise(sample_seeds, video_noise_shape, device=device, dtype=torch.bfloat16)
+            audio_noise = sample_noise(sample_seeds, audio_noise_shape, device=device, dtype=torch.bfloat16)
 
         # Pipeline inference timing
         t_inference = time.time()

@@ -41,7 +41,6 @@ class DualStreamSelfForcingPipeline:
         self.i2v = False
 
         self.kv_cache = None
-        self.kv_cache2 = None
 
         self.video_kv_cache_num_heads = generator.video_config["num_heads"]  # 12 for 1.3B, 24 for 5B
         self.video_kv_cache_dim_head = generator.video_config["dim"] // generator.video_config["num_heads"]  # 128

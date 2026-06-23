@@ -183,8 +183,8 @@ class DualStreamCausalInferencePipeline(torch.nn.Module):
             self.generator.audio_config["dim"] // self.generator.audio_config["num_heads"]
         )  # 128
 
-        video_num_max_frames = 30
-        audio_num_max_frames = 150
+        video_num_max_frames = int(config.num_output_frames)
+        audio_num_max_frames = int(config.num_output_frames) * 5
 
         self.video_kv_cache_size = video_num_max_frames * self.video_frame_seq_length
         self.audio_kv_cache_size = (
