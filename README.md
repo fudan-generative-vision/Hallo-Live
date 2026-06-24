@@ -3,9 +3,9 @@
 
 <div align='center'>
 <a href="https://github.com/chunyu-li" target="_blank">Chunyu Li</a><sup>1,2,*</sup> &emsp;
-<a href="https://github.com/fudan-generative-vision/Hallo-Live" target="_blank">Jiaye Li</a><sup>2,*</sup> &emsp;
-<a href="https://github.com/fudan-generative-vision/Hallo-Live" target="_blank">Ruiqiao Mei</a><sup>2</sup> &emsp;
-<a href="https://github.com/fudan-generative-vision/Hallo-Live" target="_blank">Haoyuan Xia</a><sup>1,3</sup>
+<a href="https://studentxll.github.io/" target="_blank">Jiaye Li</a><sup>2,*</sup> &emsp;
+<a href="https://merryqiao.github.io/" target="_blank">Ruiqiao Mei</a><sup>2</sup> &emsp;
+<a href="https://scholar.google.com/citations?user=hiH5oKcAAAAJ" target="_blank">Haoyuan Xia</a><sup>1,3</sup>
 </div>
 <div align='center'>
 <a href="http://zhuhao.cc/home/" target="_blank">Hao Zhu</a><sup>4</sup> &emsp;
@@ -184,6 +184,10 @@ Training uses `torchrun` and FSDP. Before launching, check the following fields 
 - `save_ckpt_dir`: output directory for training checkpoints.
 - `sharding_strategy`, `generator_fsdp_wrap_strategy`, `real_score_fsdp_wrap_strategy`, `fake_score_fsdp_wrap_strategy`: distributed training strategy.
 
+### GPU Memory Requirements
+
+The Stage 1 ODE initialization is relatively lightweight in VRAM. The main VRAM bottleneck is Stage 2 dual-stream DMD training, which requires at least **8 $\times$ NVIDIA H200 GPUs**.
+
 ### Training Dataset
 
 For convenience, we’ve open-sourced the training dataset `synthetic_prompts_32k.csv` in our [HuggingFace repo](https://huggingface.co/fudan-generative-ai/Hallo-Live). You can either download it manually or use the following command to download it directly:
@@ -232,6 +236,8 @@ To perform multi-node training, such as on 16 or 32 GPUs, run the script:
 bash scripts/train_dmd_5B_multinode.sh
 ```
 
+During Stage 2 DMD training, we found that the audio stream converges more slowly than the video stream. Therefore, we use separate learning rates for the two streams, with a higher learning rate for the audio stream. See `configs/dual_stream_dmd_5B.yaml` for the specific `lr_video` and `lr_audio` settings.
+
 To reproduce HP-DMD, enable reward guidance in the DMD config:
 
 ```yaml
@@ -241,7 +247,7 @@ reward_beta: 2.0
 reward_model_cpu_offload: true
 ```
 
-The paper uses a continued Stage 2 strategy: first train video and audio jointly until the video stream stabilizes, then freeze the video stream and continue audio-only optimization. In this repository, audio-only continued training is controlled by:
+Additionally, the paper uses a continued Stage 2 strategy: first train video and audio jointly until the video stream stabilizes, then freeze the video stream and continue audio-only optimization. In this repository, audio-only continued training is controlled by:
 
 ```yaml
 train_audio_stream_only: true
